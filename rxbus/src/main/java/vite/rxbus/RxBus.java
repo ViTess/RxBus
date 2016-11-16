@@ -25,10 +25,6 @@ public class RxBus {
         bus.post(tag, value);
     }
 
-    public static Observable toObservable(String tag, Object value) {
-        return bus.toObservable(tag, value);
-    }
-
     public interface Bus {
         void register(Object target);
 
@@ -37,7 +33,5 @@ public class RxBus {
         void post(String tag);
 
         void post(String tag, Object value);
-
-        Observable toObservable(String tag, Object value);
     }
 }

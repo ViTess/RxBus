@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import vite.rxbus.RxBus;
 import vite.rxbus.annotation.Subscribe;
@@ -34,6 +35,7 @@ public class TestFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
 
+    private Context context;
     private View rootView;
     private TextView tv;
 
@@ -74,6 +76,7 @@ public class TestFragment extends Fragment {
         // Inflate the layout for this fragment
         rootView = inflater.inflate(R.layout.fragment_test, container, false);
         tv = (TextView) rootView.findViewById(R.id.test_tv);
+        context = getContext();
         RxBus.register(this);
         return rootView;
     }
@@ -108,7 +111,7 @@ public class TestFragment extends Fragment {
         RxBus.unregister(this);
     }
 
-    @Subscribe(tags = MainActivity.TAG)
+    @Subscribe(tag = MainActivity.TAG)
     public void test(int random) {
         tv.setText("receive : " + random);
     }
@@ -116,6 +119,21 @@ public class TestFragment extends Fragment {
     @Subscribe
     public void test() {
         tv.setText("void");
+    }
+
+    @Subscribe(tag = {"test1", "test2", "test3"})
+    public void testTag1(String tag) {
+        tv.setText("testTag " + tag);
+    }
+
+    @Subscribe(tag = {"test2"})
+    public void testTag2(String tag) {
+        Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
+    }
+
+    @Subscribe(tag = "test3")
+    public void testTag3(String tag) {
+        Log.e("TestFragment", "testTag3 " + tag);
     }
 
     /**

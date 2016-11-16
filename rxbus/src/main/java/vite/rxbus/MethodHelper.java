@@ -4,48 +4,94 @@ import android.util.Log;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import vite.rxbus.annotation.RxThread;
 import vite.rxbus.annotation.Subscribe;
-import vite.rxbus.contract.MethodKey;
-import vite.rxbus.contract.ObvBuilder;
 
 /**
  * 根据注解获取对应的方法
  * Created by trs on 16-11-14.
  */
-public class MethodHelper {
-    public static void getMethodList(Object classEntity, Map<MethodKey, Set<ObvBuilder>> map) {
-        //获取类里所有的方法
+class MethodHelper {
+
+    public static ArrayList<MethodKey> getMethodKeys(Object classEntity) {
+        ArrayList<MethodKey> keyArray = new ArrayList<>();
         final Method[] methods = classEntity.getClass().getDeclaredMethods();
         for (Method method : methods) {
             //是否是被注解修饰的方法
             if (method.isAnnotationPresent(Subscribe.class)) {
-                Log.v("RxBus MethodHelper", "method:" + method.getName() + " isAnnotationPresent");
                 Class paramType = getMethodParamClass(method);
-                boolean isParamEmpty = (paramType == Void.TYPE);
-                //获取方法上的注解中的tag和thread
                 Subscribe subsAnno = method.getAnnotation(Subscribe.class);
-                RxThread thread = subsAnno.thread();
-                String[] tags = subsAnno.tags();
+                String[] tags = subsAnno.tag();
 
                 for (String tag : tags) {
-                    MethodKey key = new MethodKey(tag, paramType);
-                    Set<ObvBuilder> methodSets = map.get(key);
-                    if (methodSets == null) {
-                        methodSets = new HashSet<>();
-                        map.put(key, methodSets);
-                    }
-                    methodSets.add(new ObvBuilder(classEntity, method, thread, isParamEmpty));
+                    keyArray.add(new MethodKey(tag, paramType));
                 }
             }
+        }
+        return keyArray;
+    }
+
+    public static boolean getMethodList(Object classEntity, Map<MethodKey, Set<ObvBuilder>> map) {
+        //获取类里所有的方法
+        final Class clazz = classEntity.getClass();
+        Map<MethodKey, ObvBuilder> cache = MethodCache.getInstance().getCache(clazz);
+        if (cache == null) {
+            Log.i("MethodHelper getMethodList", clazz + " hasn't cache");
+            cache = new ConcurrentHashMap<>();
+            final Method[] methods = clazz.getDeclaredMethods();
+            for (Method method : methods) {
+                //是否是被注解修饰的方法
+                if (method.isAnnotationPresent(Subscribe.class)) {
+                    Class paramType = getMethodParamClass(method);
+                    boolean isParamEmpty = (paramType == Void.TYPE);
+                    //获取方法上的注解中的tag和thread
+                    Subscribe subsAnno = method.getAnnotation(Subscribe.class);
+                    RxThread thread = subsAnno.thread();
+                    String[] tags = subsAnno.tag();
+
+                    for (String tag : tags) {
+                        MethodKey key = new MethodKey(tag, paramType);
+                        Set<ObvBuilder> methodSets = map.get(key);
+                        if (methodSets == null) {
+                            methodSets = new HashSet<>();
+                            map.put(key, methodSets);
+                        }
+                        ObvBuilder value = new ObvBuilder(classEntity, method, thread, isParamEmpty);
+                        methodSets.add(value);
+                        cache.put(key, value);
+                    }
+                }
+            }
+            if (cache.size() > 0)
+                MethodCache.getInstance().addCache(clazz, cache);
+            return false;
+        } else {
+            Iterator iter = cache.entrySet().iterator();
+            while (iter.hasNext()) {
+                Map.Entry entry = (Map.Entry) iter.next();
+                MethodKey key = (MethodKey) entry.getKey();
+                ObvBuilder value = (ObvBuilder) entry.getValue();
+
+                Set<ObvBuilder> methodSets = map.get(key);
+                if (methodSets == null) {
+                    methodSets = new HashSet<>();
+                    map.put(key, methodSets);
+                }
+                methodSets.add(value);
+            }
+            return true;
         }
     }
 
     private static Class getMethodParamClass(Method m) {
-        //获取方法的传入参数类型
+        //获取方法的传入参数类型/
         Class[] paramTypes = m.getParameterTypes();
         if (paramTypes.length > 1) //方法的传入参数只允许1个，否则异常
             throw new IllegalArgumentException("parameter qty error");

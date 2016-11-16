@@ -1,4 +1,4 @@
-package vite.rxbus;
+package vite.rxbus.annotation;
 
 import rx.Scheduler;
 import rx.android.schedulers.AndroidSchedulers;

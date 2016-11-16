@@ -1,6 +1,4 @@
-package vite.rxbus.contract;
-
-import android.util.Log;
+package vite.rxbus;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,13 +8,12 @@ import rx.functions.Action1;
 import rx.subjects.PublishSubject;
 import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
-import vite.rxbus.RxThread;
+import vite.rxbus.annotation.RxThread;
 
 /**
  * Created by trs on 16-11-14.
  */
-
-public class ObvBuilder {
+class ObvBuilder {
     private Subject mSubject;
     private Subscription mSubscription;
     private Object mClassEntity;//类实例
@@ -66,6 +63,10 @@ public class ObvBuilder {
 
     public void post(Object value) {
         mSubject.onNext(value);
+    }
+
+    public Class getClassEntity() {
+        return mClassEntity.getClass();
     }
 
     private void invoke(Object value) {

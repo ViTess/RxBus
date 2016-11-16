@@ -4,13 +4,14 @@ import android.net.Uri;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
 import java.util.Random;
 
 import vite.rxbus.RxBus;
+import vite.rxbus.annotation.RxThread;
 import vite.rxbus.annotation.Subscribe;
 
 public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener {
@@ -26,6 +27,9 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
         findViewById(R.id.main_bt).setOnClickListener(this);
         findViewById(R.id.main_bt_void).setOnClickListener(this);
+        findViewById(R.id.main_bt_tag1).setOnClickListener(this);
+        findViewById(R.id.main_bt_tag2).setOnClickListener(this);
+        findViewById(R.id.main_bt_tag3).setOnClickListener(this);
 
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         ft.replace(R.id.main_fl, new TestFragment());
@@ -36,12 +40,21 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     @Override
     public void onClick(View v) {
-        switch(v.getId()){
+        switch (v.getId()) {
             case R.id.main_bt:
                 RxBus.post(TAG, random.nextInt());
                 break;
             case R.id.main_bt_void:
                 RxBus.post(null);
+                break;
+            case R.id.main_bt_tag1:
+                RxBus.post("test1", "Main Button Tag1");
+                break;
+            case R.id.main_bt_tag2:
+                RxBus.post("test2", "Main Button Tag2");
+                break;
+            case R.id.main_bt_tag3:
+                RxBus.post("test3", "Main Button Tag3");
                 break;
         }
     }
@@ -51,7 +64,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     }
 
-    @Subscribe(tags = TAG)
+    @Subscribe(tag = TAG)
     public void test(int random) {
         Toast.makeText(this, "random:" + random, Toast.LENGTH_SHORT).show();
     }
@@ -59,5 +72,10 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     @Subscribe
     public void test() {
         Toast.makeText(this, "void", Toast.LENGTH_SHORT).show();
+    }
+
+    @Subscribe(thread = RxThread.IO)
+    public void testThread() {
+        Log.v("testThread", "thread:" + Thread.currentThread());
     }
 }

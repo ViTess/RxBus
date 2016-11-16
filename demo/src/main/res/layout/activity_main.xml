@@ -29,6 +29,38 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/main_bt_tag1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="tag1"
+            android:textAllCaps="false"
+            />
+
+        <Button
+            android:id="@+id/main_bt_tag2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="tag2"
+            android:textAllCaps="false"
+            />
+
+        <Button
+            android:id="@+id/main_bt_tag3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="tag3"
+            android:textAllCaps="false"
+            />
+
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/main_fl"
         android:layout_width="match_parent"

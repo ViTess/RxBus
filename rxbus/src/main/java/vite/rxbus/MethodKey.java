@@ -1,10 +1,10 @@
-package vite.rxbus.contract;
+package vite.rxbus;
 
 /**
  * 在map中作为key
  * Created by trs on 16-11-14.
  */
-public class MethodKey {
+class MethodKey {
     private String tag;//tag
     private Class valueType;//传递值的class类型
 

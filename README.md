@@ -1,0 +1,3 @@
+# Android RxBus
+
+support annotation

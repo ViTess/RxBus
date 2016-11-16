@@ -1,14 +1,13 @@
-package vite.rxbus.contract;
+package vite.rxbus;
 
 import java.lang.reflect.Method;
 
-import vite.rxbus.RxThread;
+import vite.rxbus.annotation.RxThread;
 
 /**
  * Created by trs on 16-11-14.
  */
-
-public class MethodValue {
+class MethodValue {
     private Method method;
     private RxThread rxThread;
 
