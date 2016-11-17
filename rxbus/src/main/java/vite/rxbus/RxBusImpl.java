@@ -18,14 +18,20 @@ import java.util.concurrent.ConcurrentMap;
 class RxBusImpl implements RxBus.Bus {
 
     /**
-     * 强缓存，记录当前已经注册的
+     * 记录所有已注册的
      */
     private static final ConcurrentMap<MethodKey, Set<ObvBuilder>> MethodMap = new ConcurrentHashMap<>();
+
+    /**
+     * 记录类与方法的对应关系
+     */
+    private static final ConcurrentMap<String, Map<MethodKey, Set<ObvBuilder>>> RegisterMap = new ConcurrentHashMap<>();
 
     /**
      * @param target 类实例
      */
     @Override
+
     public void register(Object target) {
         //先获取类中所有注解的方法和对应的key
         Log.v("RxBus register", "target:" + target.getClass().getName());
@@ -54,8 +60,7 @@ class RxBusImpl implements RxBus.Bus {
                 Iterator iter = sets.iterator();
                 while (iter.hasNext()) {
                     ObvBuilder value = (ObvBuilder) iter.next();
-                    if (value.getClassEntity().equals(clazz))
-                        sets.remove(value);
+                    value.removeEntity(target);
                 }
             }
         } else {
@@ -92,7 +97,8 @@ class RxBusImpl implements RxBus.Bus {
         String t = tag;
         if (t == null)
             t = "__default__";
-        MethodKey k = new MethodKey(t, value.getClass());
+        Class clazz = value == null ? Void.TYPE : value.getClass();
+        MethodKey k = new MethodKey(t, clazz);
         Set<ObvBuilder> sets = MethodMap.get(k);
         if (sets != null) {
             Iterator setIter = sets.iterator();

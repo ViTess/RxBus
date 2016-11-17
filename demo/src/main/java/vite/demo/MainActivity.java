@@ -1,9 +1,12 @@
 package vite.demo;
 
 import android.net.Uri;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -31,9 +34,21 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         findViewById(R.id.main_bt_tag2).setOnClickListener(this);
         findViewById(R.id.main_bt_tag3).setOnClickListener(this);
 
-        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        ft.replace(R.id.main_fl, new TestFragment());
-        ft.commit();
+        ViewPager vp = (ViewPager) findViewById(R.id.main_vp);
+        final Fragment[] fragments = new Fragment[]{TestFragment.newInstance("one", null)
+                , TestFragment.newInstance("two", null)};
+        FragmentPagerAdapter adapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
+            @Override
+            public Fragment getItem(int position) {
+                return fragments[position];
+            }
+
+            @Override
+            public int getCount() {
+                return fragments.length;
+            }
+        };
+        vp.setAdapter(adapter);
 
         RxBus.register(this);
     }

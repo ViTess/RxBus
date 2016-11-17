@@ -2,6 +2,10 @@ package vite.rxbus;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 import rx.Subscription;
 import rx.functions.Action1;
@@ -16,7 +20,8 @@ import vite.rxbus.annotation.RxThread;
 class ObvBuilder {
     private Subject mSubject;
     private Subscription mSubscription;
-    private Object mClassEntity;//类实例
+    //    private Object mClassEntity;//类实例
+    private Set<Object> classEntitySets;
 
     private Method mMethod;
     private RxThread mRxThread;
@@ -24,27 +29,44 @@ class ObvBuilder {
 
     private int hashCode;
 
-    public ObvBuilder(Object classEntity, Method method, RxThread rxThread, boolean isParamEmpty) {
-        this.mClassEntity = classEntity;
+    public ObvBuilder(Method method, RxThread rxThread, boolean isParamEmpty) {
         this.mMethod = method;
         this.mRxThread = rxThread;
         this.isParamEmpty = isParamEmpty;
 
-        hashCode = mClassEntity.hashCode() + mMethod.hashCode() + mRxThread.hashCode();
+        classEntitySets = new HashSet<>();
+
+        hashCode = mMethod.hashCode() + mRxThread.hashCode();
+    }
+
+    public void addEntity(Object classEntity) {
+        classEntitySets.add(classEntity);
+    }
+
+    public boolean removeEntity(Object classEntity) {
+        return classEntitySets.remove(classEntity);
     }
 
     public void create() {
-        mSubject = new SerializedSubject(PublishSubject.create());
-        mSubscription = mSubject.observeOn(RxThread.getScheduler(mRxThread))
-                .subscribe(new Action1<Object>() {
-                    @Override
-                    public void call(Object o) {
-                        if (isParamEmpty)
-                            invoke();
-                        else
-                            invoke(o);
-                    }
-                });
+        if (mSubject == null || (mSubscription != null && !mSubscription.isUnsubscribed())) {
+            if (mSubscription != null && mSubscription.isUnsubscribed())
+                mSubscription.unsubscribe();
+            mSubject = new SerializedSubject(PublishSubject.create());
+            mSubscription = mSubject.observeOn(RxThread.getScheduler(mRxThread))
+                    .subscribe(new Action1<Object>() {
+                        @Override
+                        public void call(Object o) {
+                            Iterator iter = classEntitySets.iterator();
+                            while (iter.hasNext()) {
+                                Object classEntity = iter.next();
+                                if (isParamEmpty)
+                                    invoke(classEntity);
+                                else
+                                    invoke(classEntity, o);
+                            }
+                        }
+                    });
+        }
     }
 
     public void destory() {
@@ -54,9 +76,10 @@ class ObvBuilder {
         if (mSubscription != null && mSubscription.isUnsubscribed())
             mSubscription.unsubscribe();
 
+        classEntitySets.clear();
+        classEntitySets = null;
         mSubject = null;
         mSubscription = null;
-        mClassEntity = null;
         mRxThread = null;
         mMethod = null;
     }
@@ -65,26 +88,18 @@ class ObvBuilder {
         mSubject.onNext(value);
     }
 
-    public Class getClassEntity() {
-        return mClassEntity.getClass();
-    }
-
-    private void invoke(Object value) {
+    private void invoke(Object classEntity, Object value) {
         try {
-            mMethod.invoke(mClassEntity, value);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+            mMethod.invoke(classEntity, value);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void invoke() {
+    private void invoke(Object classEntity) {
         try {
-            mMethod.invoke(mClassEntity);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+            mMethod.invoke(classEntity);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -94,7 +109,6 @@ class ObvBuilder {
         return "ObvBuilder{" +
                 "mSubject=" + mSubject +
                 ", mSubscription=" + mSubscription +
-                ", mClassEntity=" + mClassEntity +
                 ", mMethod=" + mMethod +
                 ", mRxThread=" + mRxThread +
                 '}';

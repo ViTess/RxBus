@@ -25,11 +25,10 @@ public class MethodCache {
         return instance;
     }
 
-
     /**
-     * 缓存128条记录，sizeOf为map.size()，每put一次size+=size，满128清除低频率使用的缓存
+     * 缓存32条记录，sizeOf为map.size()，每put一次size+=size，满32清除低频率使用的缓存
      */
-    private static final int CacheSize = 128;
+    private static final int CacheSize = 32;
 
     private LruCache<Class, Map<MethodKey, ObvBuilder>> mCache;
 

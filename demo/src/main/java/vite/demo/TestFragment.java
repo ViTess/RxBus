@@ -37,7 +37,7 @@ public class TestFragment extends Fragment {
 
     private Context context;
     private View rootView;
-    private TextView tv;
+    private TextView tv, tv_title;
 
     public TestFragment() {
         // Required empty public constructor
@@ -75,9 +75,13 @@ public class TestFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         rootView = inflater.inflate(R.layout.fragment_test, container, false);
+        tv_title = (TextView) rootView.findViewById(R.id.test_tv_title);
         tv = (TextView) rootView.findViewById(R.id.test_tv);
         context = getContext();
         RxBus.register(this);
+
+        tv_title.setText(mParam1);
+
         return rootView;
     }
 

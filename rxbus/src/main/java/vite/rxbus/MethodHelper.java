@@ -73,6 +73,7 @@ class MethodHelper {
                 MethodCache.getInstance().addCache(clazz, cache);
             return false;
         } else {
+            Log.i("MethodHelper getMethodList", clazz + " has cache");
             Iterator iter = cache.entrySet().iterator();
             while (iter.hasNext()) {
                 Map.Entry entry = (Map.Entry) iter.next();
