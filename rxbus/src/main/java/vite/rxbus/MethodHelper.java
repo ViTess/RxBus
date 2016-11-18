@@ -38,56 +38,31 @@ class MethodHelper {
         return keyArray;
     }
 
-    public static boolean getMethodList(Object classEntity, Map<MethodKey, Set<ObvBuilder>> map) {
+    public static void getMethodList(Object classEntity, Map<MethodKey, Set<ObvBuilder>> map) {
         //获取类里所有的方法
         final Class clazz = classEntity.getClass();
-        Map<MethodKey, ObvBuilder> cache = MethodCache.getInstance().getCache(clazz);
-        if (cache == null) {
-            Log.i("MethodHelper getMethodList", clazz + " hasn't cache");
-            cache = new ConcurrentHashMap<>();
-            final Method[] methods = clazz.getDeclaredMethods();
-            for (Method method : methods) {
-                //是否是被注解修饰的方法
-                if (method.isAnnotationPresent(Subscribe.class)) {
-                    Class paramType = getMethodParamClass(method);
-                    boolean isParamEmpty = (paramType == Void.TYPE);
-                    //获取方法上的注解中的tag和thread
-                    Subscribe subsAnno = method.getAnnotation(Subscribe.class);
-                    RxThread thread = subsAnno.thread();
-                    String[] tags = subsAnno.tag();
+        final Method[] methods = clazz.getDeclaredMethods();
+        for (Method method : methods) {
+            //是否是被注解修饰的方法
+            if (method.isAnnotationPresent(Subscribe.class)) {
+                Class paramType = getMethodParamClass(method);
+                boolean isParamEmpty = (paramType == Void.TYPE);
+                //获取方法上的注解中的tag和thread
+                Subscribe subsAnno = method.getAnnotation(Subscribe.class);
+                RxThread thread = subsAnno.thread();
+                String[] tags = subsAnno.tag();
 
-                    for (String tag : tags) {
-                        MethodKey key = new MethodKey(tag, paramType);
-                        Set<ObvBuilder> methodSets = map.get(key);
-                        if (methodSets == null) {
-                            methodSets = new HashSet<>();
-                            map.put(key, methodSets);
-                        }
-                        ObvBuilder value = new ObvBuilder(classEntity, method, thread, isParamEmpty);
-                        methodSets.add(value);
-                        cache.put(key, value);
+                for (String tag : tags) {
+                    MethodKey key = new MethodKey(tag, paramType);
+                    Set<ObvBuilder> methodSets = map.get(key);
+                    if (methodSets == null) {
+                        methodSets = new HashSet<>();
+                        map.put(key, methodSets);
                     }
+                    ObvBuilder value = new ObvBuilder(classEntity, method, thread, isParamEmpty);
+                    methodSets.add(value);
                 }
             }
-            if (cache.size() > 0)
-                MethodCache.getInstance().addCache(clazz, cache);
-            return false;
-        } else {
-            Log.i("MethodHelper getMethodList", clazz + " has cache");
-            Iterator iter = cache.entrySet().iterator();
-            while (iter.hasNext()) {
-                Map.Entry entry = (Map.Entry) iter.next();
-                MethodKey key = (MethodKey) entry.getKey();
-                ObvBuilder value = (ObvBuilder) entry.getValue();
-
-                Set<ObvBuilder> methodSets = map.get(key);
-                if (methodSets == null) {
-                    methodSets = new HashSet<>();
-                    map.put(key, methodSets);
-                }
-                methodSets.add(value);
-            }
-            return true;
         }
     }
 

@@ -23,11 +23,6 @@ class RxBusImpl implements RxBus.Bus {
     private static final ConcurrentMap<MethodKey, Set<ObvBuilder>> MethodMap = new ConcurrentHashMap<>();
 
     /**
-     * 记录类与方法的对应关系
-     */
-    private static final ConcurrentMap<String, Map<MethodKey, Set<ObvBuilder>>> RegisterMap = new ConcurrentHashMap<>();
-
-    /**
      * @param target 类实例
      */
     @Override
@@ -52,26 +47,16 @@ class RxBusImpl implements RxBus.Bus {
     public void unregister(Object target) {
         Log.v("RxBus", "unregister target:" + target.getClass().getName());
         final Class clazz = target.getClass();
-        Map<MethodKey, ObvBuilder> cache = MethodCache.getInstance().getCache(clazz);
-        if (cache == null) {
-            ArrayList<MethodKey> keyArray = MethodHelper.getMethodKeys(target);
-            for (MethodKey key : keyArray) {
-                Set<ObvBuilder> sets = MethodMap.get(key);
-                Iterator iter = sets.iterator();
-                while (iter.hasNext()) {
-                    ObvBuilder value = (ObvBuilder) iter.next();
-                    value.removeEntity(target);
-                }
-            }
-        } else {
-            Iterator iter = cache.entrySet().iterator();
+        ArrayList<MethodKey> keyArray = MethodHelper.getMethodKeys(target);
+        for (MethodKey key : keyArray) {
+            Set<ObvBuilder> sets = MethodMap.get(key);
+            Iterator iter = sets.iterator();
             while (iter.hasNext()) {
-                Map.Entry entry = (Map.Entry) iter.next();
-                MethodKey key = (MethodKey) entry.getKey();
-                ObvBuilder value = (ObvBuilder) entry.getValue();
-
-                Set<ObvBuilder> sets = MethodMap.get(key);
-                sets.remove(value);
+                ObvBuilder value = (ObvBuilder) iter.next();
+                if (value.getClassEntity().equals(target)) {
+                    value.destory();
+                    sets.remove(value);
+                }
             }
         }
     }

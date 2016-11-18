@@ -6,11 +6,13 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 import vite.rxbus.RxBus;
@@ -22,6 +24,15 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     public static final String TAG = "Test";
 
     Random random = new Random();
+    ViewPager vp;
+    FragmentPagerAdapter adapter;
+
+    TestFragment f1 = TestFragment.newInstance("one", null);
+    TestFragment f2 = TestFragment.newInstance("two", null);
+    TestFragment f3 = TestFragment.newInstance("three", null);
+
+    ArrayList<Fragment> arrayList = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,23 +45,29 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         findViewById(R.id.main_bt_tag2).setOnClickListener(this);
         findViewById(R.id.main_bt_tag3).setOnClickListener(this);
 
-        ViewPager vp = (ViewPager) findViewById(R.id.main_vp);
-        final Fragment[] fragments = new Fragment[]{TestFragment.newInstance("one", null)
-                , TestFragment.newInstance("two", null)};
-        FragmentPagerAdapter adapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
+        vp = (ViewPager) findViewById(R.id.main_vp);
+        arrayList.add(f1);
+        arrayList.add(f2);
+
+        adapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
             @Override
             public Fragment getItem(int position) {
-                return fragments[position];
+                return arrayList.get(position);
             }
 
             @Override
             public int getCount() {
-                return fragments.length;
+                return arrayList.size();
             }
+
         };
         vp.setAdapter(adapter);
 
         RxBus.register(this);
+
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        transaction.replace(R.id.main_fl , f3);
+        transaction.commit();
     }
 
     @Override
@@ -69,7 +86,10 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                 RxBus.post("test2", "Main Button Tag2");
                 break;
             case R.id.main_bt_tag3:
-                RxBus.post("test3", "Main Button Tag3");
+//                RxBus.post("test3", "Main Button Tag3");
+                FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+                transaction.remove(f3);
+                transaction.commit();
                 break;
         }
     }

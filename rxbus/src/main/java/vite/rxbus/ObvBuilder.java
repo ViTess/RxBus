@@ -20,8 +20,7 @@ import vite.rxbus.annotation.RxThread;
 class ObvBuilder {
     private Subject mSubject;
     private Subscription mSubscription;
-    //    private Object mClassEntity;//类实例
-    private Set<Object> classEntitySets;
+    private Object mClassEntity;//类实例
 
     private Method mMethod;
     private RxThread mRxThread;
@@ -29,45 +28,35 @@ class ObvBuilder {
 
     private int hashCode;
 
-    public ObvBuilder(Method method, RxThread rxThread, boolean isParamEmpty) {
+    public ObvBuilder(Object classEntity, Method method, RxThread rxThread, boolean isParamEmpty) {
+        this.mClassEntity = classEntity;
         this.mMethod = method;
         this.mRxThread = rxThread;
         this.isParamEmpty = isParamEmpty;
 
-        classEntitySets = new HashSet<>();
-
-        hashCode = mMethod.hashCode() + mRxThread.hashCode();
+        hashCode = mClassEntity.hashCode() + mMethod.hashCode() + mRxThread.hashCode();
     }
 
-    public void addEntity(Object classEntity) {
-        classEntitySets.add(classEntity);
-    }
-
-    public boolean removeEntity(Object classEntity) {
-        return classEntitySets.remove(classEntity);
+    public Object getClassEntity() {
+        return mClassEntity;
     }
 
     public void create() {
         if (mSubject == null || (mSubscription != null && !mSubscription.isUnsubscribed())) {
             if (mSubscription != null && mSubscription.isUnsubscribed())
                 mSubscription.unsubscribe();
+
             mSubject = new SerializedSubject(PublishSubject.create());
             mSubscription = mSubject.observeOn(RxThread.getScheduler(mRxThread))
-                    .subscribe(new Action1<Object>() {
+                    .subscribe(new Action1() {
                         @Override
                         public void call(Object o) {
-                            Iterator iter = classEntitySets.iterator();
-                            while (iter.hasNext()) {
-                                Object classEntity = iter.next();
-                                if (isParamEmpty)
-                                    invoke(classEntity);
-                                else
-                                    invoke(classEntity, o);
-                            }
+                            invoke(o);
                         }
                     });
         }
     }
+
 
     public void destory() {
         if (mSubject != null && mSubscription.isUnsubscribed())
@@ -76,8 +65,6 @@ class ObvBuilder {
         if (mSubscription != null && mSubscription.isUnsubscribed())
             mSubscription.unsubscribe();
 
-        classEntitySets.clear();
-        classEntitySets = null;
         mSubject = null;
         mSubscription = null;
         mRxThread = null;
@@ -88,17 +75,12 @@ class ObvBuilder {
         mSubject.onNext(value);
     }
 
-    private void invoke(Object classEntity, Object value) {
+    private void invoke(Object value) {
         try {
-            mMethod.invoke(classEntity, value);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void invoke(Object classEntity) {
-        try {
-            mMethod.invoke(classEntity);
+            if (isParamEmpty)
+                mMethod.invoke(mClassEntity);
+            else
+                mMethod.invoke(mClassEntity, value);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -109,8 +91,11 @@ class ObvBuilder {
         return "ObvBuilder{" +
                 "mSubject=" + mSubject +
                 ", mSubscription=" + mSubscription +
+                ", mClassEntity=" + mClassEntity +
                 ", mMethod=" + mMethod +
                 ", mRxThread=" + mRxThread +
+                ", isParamEmpty=" + isParamEmpty +
+                ", hashCode=" + hashCode +
                 '}';
     }
 
