@@ -1,15 +1,21 @@
 package vite.rxbus;
 
 import android.util.Log;
-import android.util.LruCache;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import vite.rxbus.annotation.RxThread;
+import vite.rxbus.annotation.Subscribe;
+
+import static vite.rxbus.MethodHelper.getMethodKeys;
+import static vite.rxbus.MethodHelper.getMethodParamClass;
 
 /**
  * Created by trs on 16-11-14.
@@ -20,25 +26,75 @@ class RxBusImpl implements RxBus.Bus {
     /**
      * 记录所有已注册的
      */
-    private static final ConcurrentMap<MethodKey, Set<ObvBuilder>> MethodMap = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<ParamKey, Set<ObvBuilder>> MethodMap = new ConcurrentHashMap<>();
 
     /**
      * @param target 类实例
      */
     @Override
-
     public void register(Object target) {
-        //先获取类中所有注解的方法和对应的key
         Log.v("RxBus register", "target:" + target.getClass().getName());
-        MethodHelper.getMethodList(target, MethodMap);
-        Iterator iter = MethodMap.entrySet().iterator();
-        while (iter.hasNext()) {
-            Map.Entry entry = (Map.Entry) iter.next();
-            Set<ObvBuilder> sets = (Set<ObvBuilder>) entry.getValue();
-            Iterator setIter = sets.iterator();
-            while (setIter.hasNext()) {
-                ObvBuilder obv = (ObvBuilder) setIter.next();
-                obv.create();
+
+        //获取类里所有的方法
+        final Class clazz = target.getClass();
+        final String className = clazz.getName();
+        Set<MethodValue> methodValueCache = MethodCache.getInstance().getCache(className);
+        if (methodValueCache == null || methodValueCache.isEmpty()) {
+            Log.v("RxBus register", className + " hasn't cache");
+            //缓存为空时
+            if (methodValueCache == null)
+                methodValueCache = new HashSet<>();
+
+            final Method[] methods = clazz.getDeclaredMethods();
+            for (Method method : methods) {
+                //是否是被注解修饰的方法
+                if (method.isAnnotationPresent(Subscribe.class)) {
+                    Class paramType = getMethodParamClass(method);
+
+                    boolean isParamEmpty = (paramType == Void.TYPE);
+                    //获取方法上的注解中的tag和thread
+                    Subscribe subsAnno = method.getAnnotation(Subscribe.class);
+                    RxThread thread = subsAnno.thread();
+                    String[] tags = subsAnno.tag();
+
+                    MethodValue methodValue = new MethodValue(method, thread, isParamEmpty);
+                    HashSet<ParamKey> paramKeys = new HashSet<>();
+                    for (String tag : tags) {
+                        ParamKey key = new ParamKey(tag, paramType);
+                        Set<ObvBuilder> methodSets = MethodMap.get(key);
+                        if (methodSets == null) {
+                            methodSets = new CopyOnWriteArraySet<>();
+                            MethodMap.putIfAbsent(key, methodSets);
+                        }
+                        ObvBuilder value = new ObvBuilder(target, methodValue);
+                        value.create();
+                        methodSets.add(value);
+
+                        paramKeys.add(key);
+                    }
+                    methodValue.setParamKeys(paramKeys);
+                    methodValueCache.add(methodValue);
+                }
+            }
+            MethodCache.getInstance().addCache(className, methodValueCache);
+        } else {
+            //缓存不为空时
+            Log.v("RxBus register", className + " has cache");
+            Iterator iter = methodValueCache.iterator();
+            while (iter.hasNext()) {
+                MethodValue methodValue = (MethodValue) iter.next();
+                Iterator paramIter = methodValue.getParamKeys().iterator();
+                while (paramIter.hasNext()) {
+                    ParamKey paramKey = (ParamKey) paramIter.next();
+                    Set<ObvBuilder> methodSets = MethodMap.get(paramKey);
+                    if (methodSets == null) {
+                        methodSets = new CopyOnWriteArraySet<>();
+                        MethodMap.putIfAbsent(paramKey, methodSets);
+                    }
+                    ObvBuilder value = new ObvBuilder(target, methodValue);
+                    value.create();
+                    methodSets.add(value);
+                }
             }
         }
     }
@@ -47,15 +103,43 @@ class RxBusImpl implements RxBus.Bus {
     public void unregister(Object target) {
         Log.v("RxBus", "unregister target:" + target.getClass().getName());
         final Class clazz = target.getClass();
-        ArrayList<MethodKey> keyArray = MethodHelper.getMethodKeys(target);
-        for (MethodKey key : keyArray) {
-            Set<ObvBuilder> sets = MethodMap.get(key);
-            Iterator iter = sets.iterator();
+        final String className = clazz.getName();
+        Set<MethodValue> methodValueCache = MethodCache.getInstance().getCache(className);
+        if (methodValueCache == null || methodValueCache.isEmpty()) {
+            Log.v("RxBus unregister", className + " hasn't cache");
+            ArrayList<ParamKey> keyArray = getMethodKeys(target);
+            for (ParamKey key : keyArray) {
+                Set<ObvBuilder> sets = MethodMap.get(key);
+                Iterator iter = sets.iterator();
+                while (iter.hasNext()) {
+                    ObvBuilder value = (ObvBuilder) iter.next();
+                    if (value.getClassEntity().equals(target)) {
+                        value.release();
+                        sets.remove(value);
+                    }
+                }
+            }
+        } else {
+            Log.v("RxBus unregister", className + " has cache");
+            Iterator iter = methodValueCache.iterator();
             while (iter.hasNext()) {
-                ObvBuilder value = (ObvBuilder) iter.next();
-                if (value.getClassEntity().equals(target)) {
-                    value.destory();
-                    sets.remove(value);
+                MethodValue methodValue = (MethodValue) iter.next();
+                Log.v("RxBus unregister", "methodValue:" + methodValue);
+                Set<ParamKey> paramKeys = methodValue.getParamKeys();
+                Log.v("RxBus unregister", "paramKeys:" + paramKeys);
+                Iterator keySets = paramKeys.iterator();
+                while (keySets.hasNext()) {
+                    ParamKey key = (ParamKey) keySets.next();
+                    Set<ObvBuilder> sets = MethodMap.get(key);
+                    Log.v("RxBus unregister", "sets:" + sets);
+                    Iterator obvSets = sets.iterator();
+                    while (obvSets.hasNext()) {
+                        ObvBuilder value = (ObvBuilder) obvSets.next();
+                        if (value.getClassEntity().equals(target)) {
+                            value.release();
+                            sets.remove(value);
+                        }
+                    }
                 }
             }
         }
@@ -66,8 +150,9 @@ class RxBusImpl implements RxBus.Bus {
         String t = tag;
         if (t == null)
             t = "__default__";
-        MethodKey k = new MethodKey(t, Void.TYPE);
+        ParamKey k = new ParamKey(t, Void.TYPE);
         Set<ObvBuilder> sets = MethodMap.get(k);
+        Log.v("RxBus post", "sets:" + sets);
         if (sets != null) {
             Iterator setIter = sets.iterator();
             while (setIter.hasNext()) {
@@ -83,8 +168,9 @@ class RxBusImpl implements RxBus.Bus {
         if (t == null)
             t = "__default__";
         Class clazz = value == null ? Void.TYPE : value.getClass();
-        MethodKey k = new MethodKey(t, clazz);
+        ParamKey k = new ParamKey(t, clazz);
         Set<ObvBuilder> sets = MethodMap.get(k);
+        Log.v("RxBus post", "sets:" + sets);
         if (sets != null) {
             Iterator setIter = sets.iterator();
             while (setIter.hasNext()) {

@@ -1,10 +1,9 @@
 package vite.rxbus;
 
 /**
- * 在map中作为key
  * Created by trs on 16-11-14.
  */
-class MethodKey {
+class ParamKey {
     private String tag;//tag
     private Class valueType;//传递值的class类型
 
@@ -14,7 +13,7 @@ class MethodKey {
      * @param tag
      * @param valueType 方法传入参数的类型
      */
-    public MethodKey(String tag, Class valueType) {
+    public ParamKey(String tag, Class valueType) {
         this.tag = tag;
         this.valueType = getClassType(valueType);
         hashCode = this.tag.hashCode() + this.valueType.hashCode();
@@ -39,14 +38,14 @@ class MethodKey {
             return false;
         }
 
-        final MethodKey other = (MethodKey) obj;
+        final ParamKey other = (ParamKey) obj;
 
         return tag.equals(other.tag) && valueType == other.valueType;
     }
 
     @Override
     public String toString() {
-        return "MethodKey{" +
+        return "ParamKey{" +
                 "tag='" + tag + '\'' +
                 ", valueType=" + valueType +
                 ", hashCode=" + hashCode +

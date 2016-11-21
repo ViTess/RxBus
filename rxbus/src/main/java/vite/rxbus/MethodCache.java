@@ -4,7 +4,7 @@ import android.util.Log;
 import android.util.LruCache;
 
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by trs on 16-11-15.
@@ -27,30 +27,31 @@ public class MethodCache {
 
     /**
      * 缓存32条记录，sizeOf为map.size()，每put一次size+=size，满32清除低频率使用的缓存
+     * <p>
+     * 缓存可适当根据自己需求调整
      */
     private static final int CacheSize = 32;
 
-    private LruCache<Class, Map<MethodKey, ObvBuilder>> mCache;
+    private LruCache<String, Set<MethodValue>> mCache;
 
     private MethodCache() {
-        mCache = new LruCache<Class, Map<MethodKey, ObvBuilder>>(CacheSize) {
+        mCache = new LruCache<String, Set<MethodValue>>(CacheSize) {
             @Override
-            protected int sizeOf(Class key, Map<MethodKey, ObvBuilder> value) {
+            protected int sizeOf(String key, Set<MethodValue> value) {
                 Log.i("MethodCache", "sizeof:" + value.size());
                 return value.size();
             }
 
             @Override
-            protected void entryRemoved(boolean evicted, Class key,
-                                        Map<MethodKey, ObvBuilder> oldValue,
-                                        Map<MethodKey, ObvBuilder> newValue) {
+            protected void entryRemoved(boolean evicted, String key,
+                                        Set<MethodValue> oldValue,
+                                        Set<MethodValue> newValue) {
                 if (evicted && oldValue != null) {
-                    Iterator iter = oldValue.entrySet().iterator();
+                    Iterator iter = oldValue.iterator();
                     while (iter.hasNext()) {
-                        Map.Entry entry = (Map.Entry) iter.next();
-                        ObvBuilder obvBuilder = (ObvBuilder) entry.getValue();
-                        Log.i("MethodCache", "entryRemoved:" + obvBuilder.toString());
-                        obvBuilder.destory();
+                        MethodValue methodValue = (MethodValue) iter.next();
+                        methodValue.release();
+                        Log.i("MethodCache", "entryRemoved:" + methodValue.toString());
                     }
                     oldValue.clear();
                     oldValue = null;
@@ -59,16 +60,16 @@ public class MethodCache {
         };
     }
 
-    public void addCache(Class classEntity, Map<MethodKey, ObvBuilder> value) {
-        if (mCache.get(classEntity) == null)
-            mCache.put(classEntity, value);
+    public void addCache(String className, Set<MethodValue> value) {
+        if (mCache.get(className) == null)
+            mCache.put(className, value);
     }
 
-    public Map<MethodKey, ObvBuilder> getCache(Class key) {
-        return mCache.get(key);
+    public Set<MethodValue> getCache(String className) {
+        return mCache.get(className);
     }
 
-    public void clearCache(Class key) {
-        mCache.remove(key);
+    public void clearCache(String className) {
+        mCache.remove(className);
     }
 }

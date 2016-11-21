@@ -22,19 +22,15 @@ class ObvBuilder {
     private Subscription mSubscription;
     private Object mClassEntity;//类实例
 
-    private Method mMethod;
-    private RxThread mRxThread;
-    private boolean isParamEmpty;//方法参数是否为空
+    private MethodValue mMethodValue;
 
     private int hashCode;
 
-    public ObvBuilder(Object classEntity, Method method, RxThread rxThread, boolean isParamEmpty) {
+    public ObvBuilder(Object classEntity, MethodValue methodValue) {
         this.mClassEntity = classEntity;
-        this.mMethod = method;
-        this.mRxThread = rxThread;
-        this.isParamEmpty = isParamEmpty;
+        this.mMethodValue = methodValue.clone();
 
-        hashCode = mClassEntity.hashCode() + mMethod.hashCode() + mRxThread.hashCode();
+        hashCode = mClassEntity.hashCode() + mMethodValue.hashCode();
     }
 
     public Object getClassEntity() {
@@ -47,18 +43,18 @@ class ObvBuilder {
                 mSubscription.unsubscribe();
 
             mSubject = new SerializedSubject(PublishSubject.create());
-            mSubscription = mSubject.observeOn(RxThread.getScheduler(mRxThread))
+            mSubscription = mSubject.observeOn(mMethodValue.getRxThread())
                     .subscribe(new Action1() {
                         @Override
                         public void call(Object o) {
-                            invoke(o);
+                            mMethodValue.invoke(mClassEntity, o);
                         }
                     });
         }
     }
 
 
-    public void destory() {
+    public void release() {
         if (mSubject != null && mSubscription.isUnsubscribed())
             mSubject.onCompleted();
 
@@ -67,36 +63,12 @@ class ObvBuilder {
 
         mSubject = null;
         mSubscription = null;
-        mRxThread = null;
-        mMethod = null;
+        mClassEntity = null;
+        mMethodValue = null;
     }
 
     public void post(Object value) {
         mSubject.onNext(value);
-    }
-
-    private void invoke(Object value) {
-        try {
-            if (isParamEmpty)
-                mMethod.invoke(mClassEntity);
-            else
-                mMethod.invoke(mClassEntity, value);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "ObvBuilder{" +
-                "mSubject=" + mSubject +
-                ", mSubscription=" + mSubscription +
-                ", mClassEntity=" + mClassEntity +
-                ", mMethod=" + mMethod +
-                ", mRxThread=" + mRxThread +
-                ", isParamEmpty=" + isParamEmpty +
-                ", hashCode=" + hashCode +
-                '}';
     }
 
     @Override
