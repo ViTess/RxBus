@@ -12,6 +12,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import vite.rxbus.RxBus;
+import vite.rxbus.annotation.RxImmediate;
+import vite.rxbus.annotation.RxMainThread;
+import vite.rxbus.annotation.RxNewThread;
 import vite.rxbus.annotation.Subscribe;
 
 
@@ -115,7 +118,7 @@ public class TestFragment extends Fragment {
         RxBus.unregister(this);
     }
 
-    @Subscribe(tag = MainActivity.TAG)
+    @Subscribe(MainActivity.TAG)
     public void test(int random) {
         tv.setText("receive : " + random);
     }
@@ -125,19 +128,27 @@ public class TestFragment extends Fragment {
         tv.setText("void");
     }
 
-    @Subscribe(tag = {"test1", "test2", "test3"})
+    @RxMainThread
+    @Subscribe({"test1", "test2", "test3"})
     public void testTag1(String tag) {
         tv.setText("testTag " + tag);
     }
 
-    @Subscribe(tag = {"test2"})
+    @Subscribe("test2")
+    @RxImmediate
     public void testTag2(String tag) {
         Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
-    @Subscribe(tag = "test3")
+    @Subscribe("test3")
+    @RxImmediate
     public void testTag3(String tag) {
         Log.e("TestFragment", "testTag3 " + tag);
+    }
+
+    @Subscribe("test3")
+    public void testEntity(Entity entity) {
+        Toast.makeText(context, entity.toString(), Toast.LENGTH_SHORT).show();
     }
 
     /**

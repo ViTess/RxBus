@@ -3,10 +3,8 @@ package vite.rxbus;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashSet;
-import java.util.Set;
 
 import rx.Scheduler;
-import vite.rxbus.annotation.RxThread;
 
 /**
  * 与class一一对应
@@ -14,27 +12,27 @@ import vite.rxbus.annotation.RxThread;
  */
 class MethodValue implements Cloneable {
     private Method mMethod;
-    private RxThread mRxThread;
+    private Scheduler mScheduler;
     private boolean isParamEmpty;
 
     private HashSet<ParamKey> keySets;
 
     private int hashCode;
 
-    public MethodValue(Method mMethod, RxThread mRxThread, boolean isParamEmpty) {
-        this.mMethod = mMethod;
-        this.mRxThread = mRxThread;
+    public MethodValue(Method method, Scheduler scheduler, boolean isParamEmpty) {
+        this.mMethod = method;
+        this.mScheduler = scheduler;
         this.isParamEmpty = isParamEmpty;
 
-        hashCode = mMethod.hashCode() + mRxThread.hashCode();
+        hashCode = mMethod.hashCode() + mScheduler.hashCode();
     }
 
     public Method getMethod() {
         return mMethod;
     }
 
-    public Scheduler getRxThread() {
-        return RxThread.getScheduler(mRxThread);
+    public Scheduler getScheduler() {
+        return mScheduler;
     }
 
     public boolean isParamEmpty() {
@@ -73,7 +71,7 @@ class MethodValue implements Cloneable {
 
     public void release() {
         mMethod = null;
-        mRxThread = null;
+        mScheduler = null;
         hashCode = 0;
         if (keySets != null) {
             keySets.clear();
@@ -85,7 +83,7 @@ class MethodValue implements Cloneable {
     public String toString() {
         return "MethodValue{" +
                 "mMethod=" + mMethod +
-                ", mRxThread=" + mRxThread +
+                ", mScheduler=" + mScheduler +
                 ", isParamEmpty=" + isParamEmpty +
                 ", hashCode=" + hashCode +
                 '}';

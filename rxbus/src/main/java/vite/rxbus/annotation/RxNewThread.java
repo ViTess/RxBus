@@ -6,15 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Created by trs on 16-10-20.
+ * Created by trs on 16-11-22.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface Subscribe {
-    /**
-     * Tag
-     *
-     * @return
-     */
-    String[] value() default {"__default__"};
+public @interface RxNewThread {
 }

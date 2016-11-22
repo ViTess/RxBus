@@ -10,7 +10,7 @@ import java.util.Set;
  * Created by trs on 16-11-15.
  */
 
-public class MethodCache {
+class MethodCache {
     private static MethodCache instance;
 
     public static MethodCache getInstance() {

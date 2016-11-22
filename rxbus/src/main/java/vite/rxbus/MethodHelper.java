@@ -3,12 +3,16 @@ package vite.rxbus;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
 
-import vite.rxbus.annotation.RxThread;
+import rx.Scheduler;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+import vite.rxbus.annotation.RxComputation;
+import vite.rxbus.annotation.RxIO;
+import vite.rxbus.annotation.RxImmediate;
+import vite.rxbus.annotation.RxMainThread;
+import vite.rxbus.annotation.RxNewThread;
+import vite.rxbus.annotation.RxTrampoline;
 import vite.rxbus.annotation.Subscribe;
 
 /**
@@ -25,7 +29,7 @@ class MethodHelper {
             if (method.isAnnotationPresent(Subscribe.class)) {
                 Class paramType = getMethodParamClass(method);
                 Subscribe subsAnno = method.getAnnotation(Subscribe.class);
-                String[] tags = subsAnno.tag();
+                String[] tags = subsAnno.value();
 
                 for (String tag : tags) {
                     keyArray.add(new ParamKey(tag, paramType));
@@ -33,6 +37,22 @@ class MethodHelper {
             }
         }
         return keyArray;
+    }
+
+    public static Scheduler getScheduler(Method method) {
+        if (method.isAnnotationPresent(RxMainThread.class))
+            return AndroidSchedulers.mainThread();
+        if (method.isAnnotationPresent(RxIO.class))
+            return Schedulers.io();
+        if (method.isAnnotationPresent(RxComputation.class))
+            return Schedulers.computation();
+        if (method.isAnnotationPresent(RxNewThread.class))
+            return Schedulers.newThread();
+        if (method.isAnnotationPresent(RxTrampoline.class))
+            return Schedulers.trampoline();
+        if (method.isAnnotationPresent(RxImmediate.class))
+            return Schedulers.immediate();
+        return Schedulers.immediate();
     }
 
     public static Class getMethodParamClass(Method m) {

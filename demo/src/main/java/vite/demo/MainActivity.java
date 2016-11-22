@@ -6,7 +6,6 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.View;
@@ -16,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import vite.rxbus.RxBus;
-import vite.rxbus.annotation.RxThread;
+import vite.rxbus.annotation.RxIO;
 import vite.rxbus.annotation.Subscribe;
 
 public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener {
@@ -66,8 +65,14 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         RxBus.register(this);
 
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.main_fl , f3);
+        transaction.replace(R.id.main_fl, f3);
         transaction.commit();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        RxBus.unregister(this);
     }
 
     @Override
@@ -86,10 +91,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                 RxBus.post("test2", "Main Button Tag2");
                 break;
             case R.id.main_bt_tag3:
-//                RxBus.post("test3", "Main Button Tag3");
-                FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-                transaction.remove(f3);
-                transaction.commit();
+                RxBus.post("test3", new Entity("Hello", "Wrold"));
                 break;
         }
     }
@@ -99,7 +101,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     }
 
-    @Subscribe(tag = TAG)
+    @Subscribe(TAG)
     public void test(int random) {
         Toast.makeText(this, "random:" + random, Toast.LENGTH_SHORT).show();
     }
@@ -109,7 +111,8 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         Toast.makeText(this, "void", Toast.LENGTH_SHORT).show();
     }
 
-    @Subscribe(thread = RxThread.IO)
+    @Subscribe
+    @RxIO
     public void testThread() {
         Log.v("testThread", "thread:" + Thread.currentThread());
     }

@@ -1,18 +1,10 @@
 package vite.rxbus;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
 import rx.Subscription;
 import rx.functions.Action1;
 import rx.subjects.PublishSubject;
 import rx.subjects.SerializedSubject;
 import rx.subjects.Subject;
-import vite.rxbus.annotation.RxThread;
 
 /**
  * Created by trs on 16-11-14.
@@ -43,7 +35,7 @@ class ObvBuilder {
                 mSubscription.unsubscribe();
 
             mSubject = new SerializedSubject(PublishSubject.create());
-            mSubscription = mSubject.observeOn(mMethodValue.getRxThread())
+            mSubscription = mSubject.observeOn(mMethodValue.getScheduler())
                     .subscribe(new Action1() {
                         @Override
                         public void call(Object o) {

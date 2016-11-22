@@ -11,11 +11,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import vite.rxbus.annotation.RxThread;
+import rx.Scheduler;
 import vite.rxbus.annotation.Subscribe;
 
 import static vite.rxbus.MethodHelper.getMethodKeys;
 import static vite.rxbus.MethodHelper.getMethodParamClass;
+import static vite.rxbus.MethodHelper.getScheduler;
 
 /**
  * Created by trs on 16-11-14.
@@ -54,10 +55,10 @@ class RxBusImpl implements RxBus.Bus {
                     boolean isParamEmpty = (paramType == Void.TYPE);
                     //获取方法上的注解中的tag和thread
                     Subscribe subsAnno = method.getAnnotation(Subscribe.class);
-                    RxThread thread = subsAnno.thread();
-                    String[] tags = subsAnno.tag();
+                    Scheduler scheduler = getScheduler(method);
+                    String[] tags = subsAnno.value();
 
-                    MethodValue methodValue = new MethodValue(method, thread, isParamEmpty);
+                    MethodValue methodValue = new MethodValue(method, scheduler, isParamEmpty);
                     HashSet<ParamKey> paramKeys = new HashSet<>();
                     for (String tag : tags) {
                         ParamKey key = new ParamKey(tag, paramType);
