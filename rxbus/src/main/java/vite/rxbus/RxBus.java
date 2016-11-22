@@ -5,7 +5,7 @@ import rx.Observable;
 /**
  * Created by trs on 16-10-20.
  */
-public class RxBus {
+public final class RxBus {
 
     private static final Bus bus = new RxBusImpl();
 
