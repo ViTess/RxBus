@@ -34,14 +34,11 @@ class RxBusImpl implements RxBus.Bus {
      */
     @Override
     public void register(Object target) {
-        Log.v("RxBus register", "target:" + target.getClass().getName());
-
         //获取类里所有的方法
         final Class clazz = target.getClass();
         final String className = clazz.getName();
         Set<MethodValue> methodValueCache = MethodCache.getInstance().getCache(className);
         if (methodValueCache == null || methodValueCache.isEmpty()) {
-            Log.v("RxBus register", className + " hasn't cache");
             //缓存为空时
             if (methodValueCache == null)
                 methodValueCache = new HashSet<>();
@@ -80,7 +77,6 @@ class RxBusImpl implements RxBus.Bus {
             MethodCache.getInstance().addCache(className, methodValueCache);
         } else {
             //缓存不为空时
-            Log.v("RxBus register", className + " has cache");
             Iterator iter = methodValueCache.iterator();
             while (iter.hasNext()) {
                 MethodValue methodValue = (MethodValue) iter.next();
@@ -102,12 +98,10 @@ class RxBusImpl implements RxBus.Bus {
 
     @Override
     public void unregister(Object target) {
-        Log.v("RxBus", "unregister target:" + target.getClass().getName());
         final Class clazz = target.getClass();
         final String className = clazz.getName();
         Set<MethodValue> methodValueCache = MethodCache.getInstance().getCache(className);
         if (methodValueCache == null || methodValueCache.isEmpty()) {
-            Log.v("RxBus unregister", className + " hasn't cache");
             ArrayList<ParamKey> keyArray = getMethodKeys(target);
             for (ParamKey key : keyArray) {
                 Set<ObvBuilder> sets = MethodMap.get(key);
@@ -121,18 +115,14 @@ class RxBusImpl implements RxBus.Bus {
                 }
             }
         } else {
-            Log.v("RxBus unregister", className + " has cache");
             Iterator iter = methodValueCache.iterator();
             while (iter.hasNext()) {
                 MethodValue methodValue = (MethodValue) iter.next();
-                Log.v("RxBus unregister", "methodValue:" + methodValue);
                 Set<ParamKey> paramKeys = methodValue.getParamKeys();
-                Log.v("RxBus unregister", "paramKeys:" + paramKeys);
                 Iterator keySets = paramKeys.iterator();
                 while (keySets.hasNext()) {
                     ParamKey key = (ParamKey) keySets.next();
                     Set<ObvBuilder> sets = MethodMap.get(key);
-                    Log.v("RxBus unregister", "sets:" + sets);
                     Iterator obvSets = sets.iterator();
                     while (obvSets.hasNext()) {
                         ObvBuilder value = (ObvBuilder) obvSets.next();
@@ -153,7 +143,6 @@ class RxBusImpl implements RxBus.Bus {
             t = "__default__";
         ParamKey k = new ParamKey(t, Void.TYPE);
         Set<ObvBuilder> sets = MethodMap.get(k);
-        Log.v("RxBus post", "sets:" + sets);
         if (sets != null) {
             Iterator setIter = sets.iterator();
             while (setIter.hasNext()) {
@@ -171,7 +160,6 @@ class RxBusImpl implements RxBus.Bus {
         Class clazz = value == null ? Void.TYPE : value.getClass();
         ParamKey k = new ParamKey(t, clazz);
         Set<ObvBuilder> sets = MethodMap.get(k);
-        Log.v("RxBus post", "sets:" + sets);
         if (sets != null) {
             Iterator setIter = sets.iterator();
             while (setIter.hasNext()) {

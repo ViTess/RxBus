@@ -1,7 +1,5 @@
 package vite.rxbus;
 
-import rx.Observable;
-
 /**
  * Created by trs on 16-10-20.
  */

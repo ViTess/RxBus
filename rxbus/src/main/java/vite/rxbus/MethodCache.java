@@ -38,7 +38,6 @@ class MethodCache {
         mCache = new LruCache<String, Set<MethodValue>>(CacheSize) {
             @Override
             protected int sizeOf(String key, Set<MethodValue> value) {
-                Log.i("MethodCache", "sizeof:" + value.size());
                 return value.size();
             }
 
@@ -51,7 +50,6 @@ class MethodCache {
                     while (iter.hasNext()) {
                         MethodValue methodValue = (MethodValue) iter.next();
                         methodValue.release();
-                        Log.i("MethodCache", "entryRemoved:" + methodValue.toString());
                     }
                     oldValue.clear();
                     oldValue = null;

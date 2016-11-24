@@ -24,6 +24,7 @@ class MethodValue implements Cloneable {
         this.mScheduler = scheduler;
         this.isParamEmpty = isParamEmpty;
 
+        mMethod.setAccessible(true);
         hashCode = mMethod.hashCode() + mScheduler.hashCode();
     }
 
