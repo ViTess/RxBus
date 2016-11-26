@@ -59,7 +59,7 @@ public class RxBusProProcessor extends AbstractProcessor {
 
     /**
      * @param annotations 该处理器声明支持并已经在源码中使用了的注解
-     * @param roundEnv    注解处理的上下文环境
+     * @param roundEnv    注解处理的上下文环境妈的
      * @return true:支持的注解处理完毕；false:支持的注解在该处理器处理完毕后，接着给其他处理器处理
      */
     @Override
