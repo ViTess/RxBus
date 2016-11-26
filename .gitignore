@@ -6,4 +6,7 @@
 /captures
 .externalNativeBuild
 /.idea/
-/rxbus-annotations/build/
+/rxbus-annotations/build
+*.txt
+/rxbus-compiler/build
+/rxbus/build

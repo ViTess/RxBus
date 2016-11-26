@@ -35,5 +35,6 @@ dependencies {
     compile 'com.android.support:support-v4:24.2.1'
     testCompile 'junit:junit:4.12'
 
+    compile project(':rxbus-annotations')
     apt project(':rxbus-compiler')
 }

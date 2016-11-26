@@ -11,11 +11,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import vite.rxbus.RxBus;
-import vite.rxbus.annotation.RxImmediate;
-import vite.rxbus.annotation.RxMainThread;
-import vite.rxbus.annotation.RxNewThread;
-import vite.rxbus.annotation.Subscribe;
+import vite.rxbus.Subscribe;
+import vite.rxbus.thread.RxImmediate;
+import vite.rxbus.thread.RxMainThread;
 
 
 /**
@@ -81,7 +79,6 @@ public class TestFragment extends Fragment {
         tv_title = (TextView) rootView.findViewById(R.id.test_tv_title);
         tv = (TextView) rootView.findViewById(R.id.test_tv);
         context = getContext();
-        RxBus.register(this);
 
         tv_title.setText(mParam1);
 
@@ -115,7 +112,6 @@ public class TestFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        RxBus.unregister(this);
     }
 
     @Subscribe(MainActivity.TAG)

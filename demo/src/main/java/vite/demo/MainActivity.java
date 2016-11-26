@@ -14,9 +14,8 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Random;
 
-import vite.rxbus.RxBus;
-import vite.rxbus.annotation.RxIO;
-import vite.rxbus.annotation.Subscribe;
+import vite.rxbus.Subscribe;
+import vite.rxbus.thread.RxIO;
 
 public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener {
 
@@ -62,8 +61,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         };
         vp.setAdapter(adapter);
 
-        RxBus.register(this);
-
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.main_fl, f3);
         transaction.commit();
@@ -72,26 +69,25 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        RxBus.unregister(this);
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.main_bt:
-                RxBus.post(TAG, random.nextInt());
+//                RxBus.post(TAG, random.nextInt());
                 break;
             case R.id.main_bt_void:
-                RxBus.post(null);
+//                RxBus.post(null);
                 break;
             case R.id.main_bt_tag1:
-                RxBus.post("test1", "Main Button Tag1");
+//                RxBus.post("test1", "Main Button Tag1");
                 break;
             case R.id.main_bt_tag2:
-                RxBus.post("test2", "Main Button Tag2");
+//                RxBus.post("test2", "Main Button Tag2");
                 break;
             case R.id.main_bt_tag3:
-                RxBus.post("test3", new Entity("Hello", "Wrold"));
+//                RxBus.post("test3", new Entity("Hello", "Wrold"));
                 break;
         }
     }
