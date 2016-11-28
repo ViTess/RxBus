@@ -2,6 +2,7 @@ package vite.rxbus;
 
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
+import com.google.common.collect.HashMultimap;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -73,6 +74,8 @@ public class RxBusProProcessor extends AbstractProcessor {
             Printer.SamplePrint2(e);
             if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                 continue;
+
+
         }
         return true;
     }
