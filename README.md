@@ -82,6 +82,10 @@
 
     使用`RxBus.post(Tag)`和`RxBus.post(Tag,Value)`即可。其中`RxBus.post(Tag)`用于发送到无参方法。
     
+TODO
+--------
+增加Collections支持
+
 Update
 --------
 
