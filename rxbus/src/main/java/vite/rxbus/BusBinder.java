@@ -1,14 +1,13 @@
 package vite.rxbus;
 
+import java.util.Map;
+import java.util.Set;
+
 /**
  * Created by trs on 16-11-28.
  */
 public interface BusBinder {
-    /**
-     * @param value
-     * @return true - success ; false - need release
-     */
-    boolean post(Object value);
+    void setBinders(Map<ParamKeeper, Set<SubjectKeeper>> map);
 
     void release();
 }

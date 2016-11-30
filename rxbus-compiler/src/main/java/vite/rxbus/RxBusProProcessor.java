@@ -3,6 +3,7 @@ package vite.rxbus;
 import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.HashMultimap;
+import com.squareup.javapoet.ClassName;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -75,7 +76,8 @@ public class RxBusProProcessor extends AbstractProcessor {
             if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                 continue;
 
-
+            BindBuilder builder = createBindBuilder(e);
+            builder.build(mFiler);
         }
         return true;
     }
@@ -109,12 +111,7 @@ public class RxBusProProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    /**
-     * 获取一个class中含有目标注解的、符合要求的所有元素
-     *
-     * @param element
-     */
-    private void findAnnotationTargets(Element element) {
-        //获取类中的所有元素，包括方法、变量、静态方法、静态变量、内部类、内部接口等
+    private BindBuilder createBindBuilder(Element e) {
+        return new BindBuilder(ClassName.get((TypeElement) e));
     }
 }
