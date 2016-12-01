@@ -32,19 +32,28 @@ public class SubjectKeeper {
                                 throwable.printStackTrace();
                                 subject.onCompleted();
 
-                                //should i register again?
+                                //TODO: should i register again?
                             }
                         });
     }
 
-    public void post(Object value) {
+    /**
+     * @param value
+     * @return false - need delete
+     */
+    public boolean post(Object value) {
         if (!isRelease) {
             subject.onNext(value);
         }
+        return !isRelease;
     }
 
     public void release() {
         isRelease = true;
-        subscription.unsubscribe();
+        if (subscription != null) {
+            subscription.unsubscribe();
+        }
+        subscription = null;
+        subject = null;
     }
 }

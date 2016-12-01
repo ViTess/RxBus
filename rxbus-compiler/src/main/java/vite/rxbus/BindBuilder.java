@@ -1,12 +1,17 @@
 package vite.rxbus;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -22,6 +27,15 @@ final class BindBuilder {
     private static final String CLASS_UNIFORM_MARK = "$$BusBinder";
 
     private static final ClassName INTERFACE_BUSBINDER = ClassName.get("vite.rxbus", "BusBinder");
+
+    private static final ClassName COLLECTIONS = ClassName.get("java.util", "Collection");
+    private static final ClassName MAP = ClassName.get("java.util", "Map");
+    private static final ClassName CONCURRENT_HASHMAP = ClassName.get("java.util.concurrent", "ConcurrentHashMap");
+    private static final ClassName COPYONWRITE_ARRAYSET = ClassName.get("java.util.concurrent", "CopyOnWriteArraySet");
+    private static final ClassName ANDROID_SCHEDULERS = ClassName.get("rx.android.schedulers", "AndroidSchedulers");
+    private static final ClassName ACTION1 = ClassName.get("rx.functions", "Action1");
+    private static final ClassName PARAM_KEEPER = ClassName.get("vite.rxbus", "ParamKeeper");
+    private static final ClassName SUBJECT_KEEPER = ClassName.get("vite.rxbus", "SubjectKeeper");
 
     private String packagePath;//包名路径，如com.example
     private ClassName targetClassName;//目标类名
@@ -67,9 +81,56 @@ final class BindBuilder {
     private TypeSpec createClass() {
         return TypeSpec.classBuilder(targetClassName.simpleName() + CLASS_UNIFORM_MARK)
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addTypeVariable()
+                .addTypeVariable(TypeVariableName.get(TypeVariableName.get("T").name, targetClassName))//继承泛型接口
                 .addSuperinterface(INTERFACE_BUSBINDER)//implements interface
+                .addFields(createFields())
+                .addMethods(createMethods())
                 .build();
+    }
+
+    private ArrayList<FieldSpec> createFields() {
+        ArrayList<FieldSpec> fields = new ArrayList<>();
+        fields.add(FieldSpec.builder(TypeVariableName.get("T"), "target", Modifier.PRIVATE).build());
+        //create the map
+        fields.add(FieldSpec.builder(ParameterizedTypeName.get(CONCURRENT_HASHMAP, PARAM_KEEPER
+                , ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER))
+                , "keepers", Modifier.PRIVATE).build());
+        return fields;
+    }
+
+    private ArrayList<MethodSpec> createMethods() {
+        ArrayList<MethodSpec> methods = new ArrayList<>();
+        methods.add(createConstructor());
+        methods.add(createSetBinder());
+//        methods.add(createRelease());
+        return methods;
+    }
+
+    private MethodSpec createConstructor() {
+        return MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(TypeVariableName.get("T"), "target")
+                .addStatement("this.target = target")
+                .addStatement("keepers = new ConcurrentHashMap<>()")
+                .build();
+    }
+
+    private MethodSpec createSetBinder() {
+        MethodSpec.Builder builder = MethodSpec.methodBuilder("setBinder")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(ParameterizedTypeName.get(MAP, PARAM_KEEPER, ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER)), "map");
+
+        for (MethodValue methodValue : methods) {
+            for (String tag : methodValue.tags) {
+
+            }
+        }
+        return builder.build();
+    }
+
+    private MethodSpec createRelease() {
+        return null;
     }
 
     @Override
