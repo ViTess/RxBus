@@ -18,6 +18,7 @@ import java.util.Set;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 
 /**
  * build the java class
@@ -102,7 +103,7 @@ final class BindBuilder {
         ArrayList<MethodSpec> methods = new ArrayList<>();
         methods.add(createConstructor());
         methods.add(createSetBinder());
-//        methods.add(createRelease());
+        methods.add(createRelease());
         return methods;
     }
 
@@ -116,21 +117,37 @@ final class BindBuilder {
     }
 
     private MethodSpec createSetBinder() {
-        MethodSpec.Builder builder = MethodSpec.methodBuilder("setBinder")
+        MethodSpec.Builder builder = MethodSpec.methodBuilder("setBinders")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(ParameterizedTypeName.get(MAP, PARAM_KEEPER, ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER)), "map");
 
         for (MethodValue methodValue : methods) {
             for (String tag : methodValue.tags) {
-
             }
         }
         return builder.build();
     }
 
     private MethodSpec createRelease() {
-        return null;
+        MethodSpec.Builder builder = MethodSpec.methodBuilder("release")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC);
+        TypeName sets = ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER);
+        TypeName collection = ParameterizedTypeName.get(COLLECTIONS, sets);
+        builder.addStatement("this.target = null")
+                .beginControlFlow("if (this.keepers != null)")
+                .addStatement("$T values = keepers.values()", collection)
+                .beginControlFlow("for ($T sets : values)", sets)
+                .beginControlFlow("for ($T keeper : sets)", SUBJECT_KEEPER)
+                .addStatement("keeper.release()")
+                .endControlFlow()
+                .addStatement("sets.clear()")
+                .endControlFlow()
+                .addStatement("keepers.clear()")
+                .addStatement("keepers = null")
+                .endControlFlow();
+        return builder.build();
     }
 
     @Override
@@ -160,14 +177,16 @@ final class BindBuilder {
         private String methodName;//方法名
         private Set<String> tags;//对应的tag
         private String threadType;//对应的Rx线程
+        private ClassName paramType;//方法的参数类型
 
         private int hashCode;
 
-        public MethodValue(String methodName, String threadType) {
+        public MethodValue(String methodName, String threadType, TypeElement element) {
             this.methodName = methodName;
             this.threadType = threadType;
+            this.paramType = ClassName.get(element);
             tags = new LinkedHashSet<>();
-            hashCode = methodName.hashCode() + threadType.hashCode();
+            hashCode = methodName.hashCode() + threadType.hashCode() + paramType.hashCode();
         }
 
         public void addTag(String tag) {
@@ -179,10 +198,12 @@ final class BindBuilder {
             if (obj == null)
                 return false;
             MethodValue value = (MethodValue) obj;
-            if (value.methodName == null || value.threadType == null)
+            if (value.methodName == null || value.threadType == null || paramType == null)
                 return false;
 
-            if (value.methodName.equals(methodName) && value.threadType.equals(threadType))
+            if (value.methodName.equals(methodName)
+                    && value.threadType.equals(threadType)
+                    && value.paramType.equals(paramType))
                 return true;
             else
                 return false;

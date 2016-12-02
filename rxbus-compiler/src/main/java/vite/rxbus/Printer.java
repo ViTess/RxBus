@@ -1,5 +1,7 @@
 package vite.rxbus;
 
+import com.google.auto.common.SuperficialValidation;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
@@ -11,11 +13,15 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 /**
@@ -83,7 +89,9 @@ final class Printer {
     }
 
     public static void SamplePrint2(Element targetElement) {
-        final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint2.txt";
+        final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint2_" + targetElement.getEnclosingElement() + "_" +
+                targetElement.getSimpleName() + "_" + targetElement
+                .asType() + ".txt";
         File file = new File(fileLocation);
         try {
             if (!file.exists())
@@ -93,9 +101,33 @@ final class Printer {
                 file.createNewFile();
             }
 
-            FileWriter writer = new FileWriter(file, true);
+            //方法element
+            ExecutableElement executableElement = (ExecutableElement) targetElement;
+
+            FileWriter writer = new FileWriter(file, false);
             writer.write("Elements: \n");
             writer.write("SimpleName: " + targetElement.getSimpleName() + "\n");
+            writer.write("Util.isStandardEncloseingClass: " + Util.isStandardEncloseingClass(targetElement) + "\n");
+            writer.write("Util.isStandardMethod: " + Util.isStandardMethod(targetElement) + "\n");
+            writer.write("SuperficialValidation.validateElement: " + SuperficialValidation.validateElement(targetElement) + "\n");
+
+            writer.write("\nExecutableElement :\n");
+            writer.write("SimpleName :" + executableElement.getSimpleName() + "\n");
+            writer.write("DefaultValue :" + executableElement.getDefaultValue() + "\n");
+            writer.write("ReturnType :" + executableElement.getReturnType() + "\n");
+            writer.write("\nParameters :" + executableElement.getParameters().size());
+            for (VariableElement ve : executableElement.getParameters()) {
+                writer.write("\nSimpleName :" + ve.getSimpleName() + "\n");
+                writer.write("ConstantValue :" + ve.getConstantValue() + "\n");
+                writer.write("EnclosingElement :" + ve.getEnclosingElement() + "\n");
+            }
+            writer.write("\nTypeParameters :" + executableElement.getTypeParameters().size());
+            for (TypeParameterElement tpe : executableElement.getTypeParameters()) {
+                writer.write("\nSimpleName :" + tpe.getSimpleName() + "\n");
+                writer.write("Kind :" + tpe.getKind() + "\n");
+                writer.write("GenericElement :" + tpe.getGenericElement() + "\n");
+                writer.write("EnclosingElement :" + tpe.getEnclosingElement() + "\n");
+            }
 
             TypeMirror mirror = targetElement.asType();
             ElementKind kind = targetElement.getKind();
@@ -103,7 +135,61 @@ final class Printer {
             Element element = targetElement.getEnclosingElement();
             List<Element> elementList = (List<Element>) targetElement.getEnclosedElements();
             List<AnnotationMirror> annotationMirrors = (List<AnnotationMirror>) targetElement.getAnnotationMirrors();
-            writer.write("TypeMirror: " + mirror + "\n");
+            writer.write("\nTypeMirror: " + mirror + "\n");
+            writer.write("ElementKind: " + kind + "\n");
+            writer.write("Modifiers: " + modifiers + "\n");
+            writer.write("EnclosingElement: " + element + "\n");
+            writer.write("EnclosedElements: " + elementList + "\n");
+            writer.write("AnnotationMirrors: " + annotationMirrors + "\n\n");
+
+            writeElement(writer, element);
+
+            writer.flush();
+            writer.close();
+        } catch (Exception e) {
+            sMessager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+        }
+    }
+
+    public static void SamplePrint3(Types typeUtil, Elements elementUtil, Element targetElement) {
+        final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint3_" + targetElement.getEnclosingElement() + "_" +
+                targetElement.getSimpleName() + "_" + targetElement
+                .asType() + ".txt";
+        File file = new File(fileLocation);
+        try {
+            if (!file.exists())
+                file.createNewFile();
+            else {
+                file.delete();
+                file.createNewFile();
+            }
+
+            //方法element
+            ExecutableElement executableElement = (ExecutableElement) targetElement;
+
+            FileWriter writer = new FileWriter(file, false);
+            writer.write("Elements: \n");
+            elementUtil.printElements(writer, targetElement);
+            elementUtil.printElements(writer, executableElement);
+
+            writer.write("\nParameters :" + executableElement.getParameters().size() + "\n");
+            for (VariableElement ve : executableElement.getParameters()) {
+                elementUtil.printElements(writer, ve);
+                writer.write("asType: " + typeUtil.asElement(ve.asType()) + "\n");
+            }
+            writer.write("\nTypeParameters :" + executableElement.getTypeParameters().size());
+            for (TypeParameterElement tpe : executableElement.getTypeParameters()) {
+                elementUtil.printElements(writer, tpe);
+            }
+
+            TypeMirror mirror = targetElement.asType();
+            ElementKind kind = targetElement.getKind();
+            Set<Modifier> modifiers = targetElement.getModifiers();
+            Element element = targetElement.getEnclosingElement();
+            List<Element> elementList = (List<Element>) targetElement.getEnclosedElements();
+            List<AnnotationMirror> annotationMirrors = (List<AnnotationMirror>) targetElement.getAnnotationMirrors();
+
+            writer.write("\nTypeMirror: " + mirror + "\n");
             writer.write("ElementKind: " + kind + "\n");
             writer.write("Modifiers: " + modifiers + "\n");
             writer.write("EnclosingElement: " + element + "\n");

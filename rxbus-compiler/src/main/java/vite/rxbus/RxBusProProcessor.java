@@ -7,6 +7,8 @@ import com.squareup.javapoet.ClassName;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +23,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
@@ -42,6 +45,8 @@ import vite.rxbus.thread.RxTrampoline;
  */
 @AutoService(Processor.class)
 public class RxBusProProcessor extends AbstractProcessor {
+
+    private static final HashMap<TypeElement, BindBuilder> BindBuilderCache = new HashMap<>();
 
     private Types mTypeUtils;//处理TypeMirror
     private Elements mElementUtils;//处理Element
@@ -69,15 +74,20 @@ public class RxBusProProcessor extends AbstractProcessor {
         //获取所有被目标注解标记的元素
         Set<Element> targetElements = (Set<Element>) roundEnv.getElementsAnnotatedWith(Subscribe.class);
         for (Element e : targetElements) {
-            if (!SuperficialValidation.validateElement(e))
-                continue;
 
-            Printer.SamplePrint2(e);
-            if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
-                continue;
+            try {
+                if (!SuperficialValidation.validateElement(e))
+                    continue;
+                if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
+                    continue;
+//                Printer.SamplePrint2(e);
+                Printer.SamplePrint3(mTypeUtils, mElementUtils, e);
 
-            BindBuilder builder = createBindBuilder(e);
-            builder.build(mFiler);
+                putBindBuilderCache(e);
+            } catch (Exception ee) {
+                ee.printStackTrace();
+                mMessager.printMessage(Diagnostic.Kind.ERROR, ee.getMessage());
+            }
         }
         return true;
     }
@@ -111,7 +121,13 @@ public class RxBusProProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    private BindBuilder createBindBuilder(Element e) {
-        return new BindBuilder(ClassName.get((TypeElement) e));
+    private void putBindBuilderCache(Element e) {
+        TypeElement clazz = (TypeElement) e.getEnclosingElement();
+        BindBuilder bindBuilder = BindBuilderCache.get(clazz);
+        if (bindBuilder == null) {
+            bindBuilder = new BindBuilder(ClassName.get(clazz));
+            BindBuilderCache.put(clazz, bindBuilder);
+        }
+        bindBuilder.build(mFiler);
     }
 }

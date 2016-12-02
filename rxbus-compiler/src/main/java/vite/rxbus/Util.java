@@ -1,11 +1,10 @@
 package vite.rxbus;
 
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
-import static java.lang.reflect.Modifier.PUBLIC;
-import static java.lang.reflect.Modifier.STATIC;
+import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.STATIC;
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.ElementKind.METHOD;
 
@@ -46,7 +45,7 @@ final class Util {
         if (element.getKind() != METHOD)
             return false;
 
-        if (element.getModifiers().contains(PUBLIC) && !element.getModifiers().contains(STATIC))
+        if (!element.getModifiers().contains(PUBLIC) || element.getModifiers().contains(STATIC))
             return false;
 
         return true;
