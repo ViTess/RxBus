@@ -19,6 +19,10 @@ import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -28,13 +32,8 @@ import javax.tools.Diagnostic;
  * Created by trs on 16-11-25.
  */
 final class Printer {
-    private static Messager sMessager;
 
-    public static void setMessager(Messager messager) {
-        sMessager = messager;
-    }
-
-    public static void SamplePrint(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public static void SamplePrint(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv, Messager messager) {
         final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/testprint" + System.currentTimeMillis() + ".txt";
         File file = new File(fileLocation);
         try {
@@ -84,11 +83,11 @@ final class Printer {
             writer.flush();
             writer.close();
         } catch (Exception e) {
-            sMessager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
         }
     }
 
-    public static void SamplePrint2(Element targetElement) {
+    public static void SamplePrint2(Element targetElement, Messager messager) {
         final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint2_" + targetElement.getEnclosingElement() + "_" +
                 targetElement.getSimpleName() + "_" + targetElement
                 .asType() + ".txt";
@@ -147,11 +146,11 @@ final class Printer {
             writer.flush();
             writer.close();
         } catch (Exception e) {
-            sMessager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
         }
     }
 
-    public static void SamplePrint3(Types typeUtil, Elements elementUtil, Element targetElement) {
+    public static void SamplePrint3(Types typeUtil, Elements elementUtil, Element targetElement, Messager messager) {
         final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint3_" + targetElement.getEnclosingElement() + "_" +
                 targetElement.getSimpleName() + "_" + targetElement
                 .asType() + ".txt";
@@ -174,8 +173,29 @@ final class Printer {
 
             writer.write("\nParameters :" + executableElement.getParameters().size() + "\n");
             for (VariableElement ve : executableElement.getParameters()) {
-                elementUtil.printElements(writer, ve);
-                writer.write("asType: " + typeUtil.asElement(ve.asType()) + "\n");
+                writer.write("asElement: " + typeUtil.asElement(ve.asType()) + "\n");
+                TypeKind tKind = ve.asType().getKind();
+                writer.write("tKind: " + tKind + "\n");
+                if (tKind.isPrimitive()) {
+                    writer.write("PrimitiveType: " + typeUtil.getPrimitiveType(ve.asType().getKind()) + "\n");
+                } else {
+                    writer.write("asType: " + ve.asType() + "\n");
+                    if (tKind.equals(TypeKind.ARRAY)) {
+                        //数组
+                        ArrayType at = (ArrayType) ve.asType();
+                        writer.write("at:" + at + "\n");
+                        writer.write("ComponentType:" + at.getComponentType() + "\n");
+                    } else if (tKind.equals(TypeKind.DECLARED)) {
+                        //类或接口
+                        DeclaredType dt = (DeclaredType) ve.asType();
+                        writer.write("dt:" + dt + "\n");
+                        Element eee = dt.asElement();
+                        writer.write("eee:" + eee + "\n");
+                        for (TypeMirror tm : dt.getTypeArguments()) {
+                            writer.write("tm:" + tm + "\n");
+                        }
+                    }
+                }
             }
             writer.write("\nTypeParameters :" + executableElement.getTypeParameters().size());
             for (TypeParameterElement tpe : executableElement.getTypeParameters()) {
@@ -201,7 +221,8 @@ final class Printer {
             writer.flush();
             writer.close();
         } catch (Exception e) {
-            sMessager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+            e.printStackTrace();
+            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
         }
     }
 

@@ -11,6 +11,7 @@ import com.squareup.javapoet.TypeVariableName;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -19,6 +20,7 @@ import java.util.Set;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 
 /**
  * build the java class
@@ -35,8 +37,18 @@ final class BindBuilder {
     private static final ClassName COPYONWRITE_ARRAYSET = ClassName.get("java.util.concurrent", "CopyOnWriteArraySet");
     private static final ClassName ANDROID_SCHEDULERS = ClassName.get("rx.android.schedulers", "AndroidSchedulers");
     private static final ClassName ACTION1 = ClassName.get("rx.functions", "Action1");
-    private static final ClassName PARAM_KEEPER = ClassName.get("vite.rxbus", "ParamKeeper");
     private static final ClassName SUBJECT_KEEPER = ClassName.get("vite.rxbus", "SubjectKeeper");
+    private static final ClassName RXBUS = ClassName.get("vite.rxbus", "RxBus");
+
+    private static final TypeName TYPE_STRING = TypeName.get(String.class);
+
+    //Map<String, CopyOnWriteArraySet<SubjectKeeper>>
+    private static final ParameterizedTypeName MAP_CACHE = ParameterizedTypeName.get(MAP, TYPE_STRING,
+            ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER));
+    //CopyOnWriteArraySet<SubjectKeeper>
+    private static final ParameterizedTypeName COW_ARRAYSET = ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER);
+    //Collection<CopyOnWriteArraySet<SubjectKeeper>>
+    private static final ParameterizedTypeName COLLECTION_SET = ParameterizedTypeName.get(COLLECTIONS, COW_ARRAYSET);
 
     private String packagePath;//包名路径，如com.example
     private ClassName targetClassName;//目标类名
@@ -52,8 +64,11 @@ final class BindBuilder {
         hashCode = packagePath.hashCode() + targetClassName.simpleName().hashCode();
     }
 
-    public void addMethodValue(MethodValue methodValue) {
-        methods.add(methodValue);
+
+    public MethodValue createMethodValue(String methodName, Class threadType, VariableElement element) {
+        MethodValue value = new MethodValue(methodName, threadType, element);
+        methods.add(value);
+        return value;
     }
 
     /**
@@ -65,7 +80,7 @@ final class BindBuilder {
         JavaFile javaFile = JavaFile.builder(packagePath, createClass()).build();
         try {
             javaFile.writeTo(filer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -93,7 +108,7 @@ final class BindBuilder {
         ArrayList<FieldSpec> fields = new ArrayList<>();
         fields.add(FieldSpec.builder(TypeVariableName.get("T"), "target", Modifier.PRIVATE).build());
         //create the map
-        fields.add(FieldSpec.builder(ParameterizedTypeName.get(CONCURRENT_HASHMAP, PARAM_KEEPER
+        fields.add(FieldSpec.builder(ParameterizedTypeName.get(CONCURRENT_HASHMAP, TYPE_STRING
                 , ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER))
                 , "keepers", Modifier.PRIVATE).build());
         return fields;
@@ -104,6 +119,7 @@ final class BindBuilder {
         methods.add(createConstructor());
         methods.add(createSetBinder());
         methods.add(createRelease());
+        methods.add(createAdd());
         return methods;
     }
 
@@ -120,8 +136,9 @@ final class BindBuilder {
         MethodSpec.Builder builder = MethodSpec.methodBuilder("setBinders")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(ParameterizedTypeName.get(MAP, PARAM_KEEPER, ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER)), "map");
+                .addParameter(MAP_CACHE, "map");
 
+        builder.addStatement("$T.getScheduler(null)", RXBUS);
         for (MethodValue methodValue : methods) {
             for (String tag : methodValue.tags) {
             }
@@ -133,12 +150,10 @@ final class BindBuilder {
         MethodSpec.Builder builder = MethodSpec.methodBuilder("release")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC);
-        TypeName sets = ParameterizedTypeName.get(COPYONWRITE_ARRAYSET, SUBJECT_KEEPER);
-        TypeName collection = ParameterizedTypeName.get(COLLECTIONS, sets);
         builder.addStatement("this.target = null")
                 .beginControlFlow("if (this.keepers != null)")
-                .addStatement("$T values = keepers.values()", collection)
-                .beginControlFlow("for ($T sets : values)", sets)
+                .addStatement("$T values = keepers.values()", COLLECTION_SET)
+                .beginControlFlow("for ($T sets : values)", COW_ARRAYSET)
                 .beginControlFlow("for ($T keeper : sets)", SUBJECT_KEEPER)
                 .addStatement("keeper.release()")
                 .endControlFlow()
@@ -146,6 +161,29 @@ final class BindBuilder {
                 .endControlFlow()
                 .addStatement("keepers.clear()")
                 .addStatement("keepers = null")
+                .endControlFlow();
+        return builder.build();
+    }
+
+    private MethodSpec createAdd() {
+        MethodSpec.Builder builder = MethodSpec.methodBuilder("add")
+                .addModifiers(Modifier.PRIVATE)
+                .addParameter(String[].class, "tags")
+                .addParameter(SUBJECT_KEEPER, "keeper")
+                .addParameter(MAP_CACHE, "map");
+        builder.beginControlFlow("for(String tag : tags)")
+                .addStatement("$T action = keepers.get(tag)", COW_ARRAYSET)
+                .beginControlFlow("if(action == null)")
+                .addStatement("action = new CopyOnWriteArraySet<>()")
+                .addStatement("keepers.put(tag, action)")
+                .endControlFlow()
+                .addStatement("action.add(keeper)")
+                .addStatement("action = map.get(tag)")
+                .beginControlFlow("if(action == null)")
+                .addStatement("action = new CopyOnWriteArraySet<>()")
+                .addStatement("keepers.put(tag, action)")
+                .endControlFlow()
+                .addStatement("action.add(keeper)")
                 .endControlFlow();
         return builder.build();
     }
@@ -173,24 +211,28 @@ final class BindBuilder {
     /**
      * targer class 's method
      */
-    private final class MethodValue {
+    public final class MethodValue {
         private String methodName;//方法名
         private Set<String> tags;//对应的tag
-        private String threadType;//对应的Rx线程
-        private ClassName paramType;//方法的参数类型
+        private Class threadType;//对应的Rx线程
+        private VariableElement paramType;
 
         private int hashCode;
 
-        public MethodValue(String methodName, String threadType, TypeElement element) {
+        private MethodValue(String methodName, Class threadType, VariableElement element) {
             this.methodName = methodName;
             this.threadType = threadType;
-            this.paramType = ClassName.get(element);
+            this.paramType = element;
             tags = new LinkedHashSet<>();
             hashCode = methodName.hashCode() + threadType.hashCode() + paramType.hashCode();
         }
 
         public void addTag(String tag) {
             tags.add(tag);
+        }
+
+        public void setTag(Set<String> tags) {
+            this.tags.addAll(tags);
         }
 
         @Override

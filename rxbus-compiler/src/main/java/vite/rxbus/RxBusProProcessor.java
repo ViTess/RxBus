@@ -9,8 +9,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -21,6 +23,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -28,10 +31,13 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+
+import vite.rxbus.BindBuilder.MethodValue;
 
 import vite.rxbus.thread.RxComputation;
 import vite.rxbus.thread.RxIO;
@@ -40,6 +46,8 @@ import vite.rxbus.thread.RxMainThread;
 import vite.rxbus.thread.RxNewThread;
 import vite.rxbus.thread.RxTrampoline;
 
+import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
+
 /**
  * Created by trs on 16-11-24.
  */
@@ -47,6 +55,8 @@ import vite.rxbus.thread.RxTrampoline;
 public class RxBusProProcessor extends AbstractProcessor {
 
     private static final HashMap<TypeElement, BindBuilder> BindBuilderCache = new HashMap<>();
+
+    private HashSet<String> rxThreadTypes = new HashSet<>();
 
     private Types mTypeUtils;//处理TypeMirror
     private Elements mElementUtils;//处理Element
@@ -60,8 +70,6 @@ public class RxBusProProcessor extends AbstractProcessor {
         mElementUtils = processingEnv.getElementUtils();
         mFiler = processingEnv.getFiler();
         mMessager = processingEnv.getMessager();
-
-        Printer.setMessager(mMessager);
     }
 
     /**
@@ -81,7 +89,7 @@ public class RxBusProProcessor extends AbstractProcessor {
                 if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                     continue;
 //                Printer.SamplePrint2(e);
-                Printer.SamplePrint3(mTypeUtils, mElementUtils, e);
+                Printer.SamplePrint3(mTypeUtils, mElementUtils, e, mMessager);
 
                 putBindBuilderCache(e);
             } catch (Exception ee) {
@@ -89,6 +97,8 @@ public class RxBusProProcessor extends AbstractProcessor {
                 mMessager.printMessage(Diagnostic.Kind.ERROR, ee.getMessage());
             }
         }
+
+        createBinder();
         return true;
     }
 
@@ -101,12 +111,14 @@ public class RxBusProProcessor extends AbstractProcessor {
     public Set<String> getSupportedAnnotationTypes() {
         LinkedHashSet<String> types = new LinkedHashSet<>();
         types.add(Subscribe.class.getCanonicalName());
-        types.add(RxMainThread.class.getCanonicalName());
-        types.add(RxIO.class.getCanonicalName());
-        types.add(RxComputation.class.getCanonicalName());
-        types.add(RxNewThread.class.getCanonicalName());
-        types.add(RxTrampoline.class.getCanonicalName());
-        types.add(RxImmediate.class.getCanonicalName());
+
+        rxThreadTypes = new HashSet<>();
+        rxThreadTypes.add(RxMainThread.class.getCanonicalName());
+        rxThreadTypes.add(RxIO.class.getCanonicalName());
+        rxThreadTypes.add(RxComputation.class.getCanonicalName());
+        rxThreadTypes.add(RxNewThread.class.getCanonicalName());
+        rxThreadTypes.add(RxTrampoline.class.getCanonicalName());
+        rxThreadTypes.add(RxImmediate.class.getCanonicalName());
         return types;
     }
 
@@ -128,6 +140,51 @@ public class RxBusProProcessor extends AbstractProcessor {
             bindBuilder = new BindBuilder(ClassName.get(clazz));
             BindBuilderCache.put(clazz, bindBuilder);
         }
-        bindBuilder.build(mFiler);
+
+        Set<String> tags = new LinkedHashSet<>();
+        String name = e.getSimpleName().toString();
+        Class threadType = null;
+        VariableElement paramType = ((ExecutableElement) e).getParameters().get(0);
+        List<? extends AnnotationMirror> annoList = e.getAnnotationMirrors();
+        for (AnnotationMirror mirror : annoList) {
+            Element annoElement = mirror.getAnnotationType().asElement();
+            if (annoElement.getKind().equals(ANNOTATION_TYPE)) {
+                if (rxThreadTypes.contains(annoElement.toString())) {
+                    String threadName = annoElement.getSimpleName().toString();
+                    if ("RxMainThread".equals(threadName))
+                        threadType = RxMainThread.class;
+                    else if ("RxIO".equals(threadName))
+                        threadType = RxIO.class;
+                    else if ("RxComputation".equals(threadName))
+                        threadType = RxComputation.class;
+                    else if ("RxNewThread".equals(threadName))
+                        threadType = RxNewThread.class;
+                    else if ("RxTrampoline".equals(threadName))
+                        threadType = RxTrampoline.class;
+                    else if ("RxImmediate".equals(threadName))
+                        threadType = RxImmediate.class;
+                    else
+                        threadType = RxMainThread.class;
+                } else
+                    threadType = RxMainThread.class;
+
+                Map<? extends ExecutableElement, ? extends AnnotationValue> map = mElementUtils.getElementValuesWithDefaults(mirror);
+                Iterator iter = map.entrySet().iterator();
+                while (iter.hasNext()) {
+                    Map.Entry entry = (Map.Entry) iter.next();
+                    //TODO : add tag
+                    List<String> values = (List<String>) ((AnnotationValue) entry.getValue()).getValue();
+                    tags.addAll(values);
+                }
+            }
+        }
+
+        MethodValue methodValue = bindBuilder.createMethodValue(name, threadType, paramType);
+        methodValue.setTag(tags);
+    }
+
+    private void createBinder() {
+        for (BindBuilder builder : BindBuilderCache.values())
+            builder.build(mFiler);
     }
 }

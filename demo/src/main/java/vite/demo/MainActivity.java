@@ -12,8 +12,13 @@ import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.subjects.PublishSubject;
+import rx.subjects.Subject;
 import vite.rxbus.Subscribe;
 import vite.rxbus.thread.RxIO;
 
@@ -30,7 +35,6 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     TestFragment f3 = TestFragment.newInstance("three", null);
 
     ArrayList<Fragment> arrayList = new ArrayList<>();
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,5 +115,19 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     @RxIO
     public void testThread() {
         Log.v("testThread", "thread:" + Thread.currentThread());
+    }
+
+    @Subscribe
+    public void testArray(ArrayList<String> array) {
+
+    }
+
+    @Subscribe
+    public void testArray2(int[] aaa) {
+    }
+
+    @Subscribe
+    public void testMap(HashMap<Integer , String> map){
+
     }
 }
