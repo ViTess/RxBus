@@ -13,14 +13,13 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
-import rx.functions.Action1;
-import rx.functions.Func1;
-import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
+import vite.rxbus.RxBus;
+import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
-import vite.rxbus.thread.RxIO;
+import vite.rxbus.ThreadType;
 
 public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener {
 
@@ -68,18 +67,21 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.main_fl, f3);
         transaction.commit();
+
+        RxBus.register(this);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        RxBus.unregister(this);
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.main_bt:
-//                RxBus.post(TAG, random.nextInt());
+                RxBus.post(TAG, random.nextInt());
                 break;
             case R.id.main_bt_void:
 //                RxBus.post(null);
@@ -103,6 +105,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
 
     @Subscribe(TAG)
     public void test(int random) {
+        Log.v("MainActivity", "random:" + random);
         Toast.makeText(this, "random:" + random, Toast.LENGTH_SHORT).show();
     }
 
@@ -112,7 +115,7 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     }
 
     @Subscribe
-    @RxIO
+    @RxThread(ThreadType.IO)
     public void testThread() {
         Log.v("testThread", "thread:" + Thread.currentThread());
     }
@@ -127,7 +130,11 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     }
 
     @Subscribe
-    public void testMap(HashMap<Integer , String> map){
+    public void testMap(HashMap<Integer, String> map) {
+    }
+
+    @Subscribe
+    public void testMoreMap(HashMap<Map<String, Integer>, Map<Float, Entity>> map) {
 
     }
 }

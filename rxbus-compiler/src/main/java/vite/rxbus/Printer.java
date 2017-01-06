@@ -1,10 +1,13 @@
 package vite.rxbus;
 
 import com.google.auto.common.SuperficialValidation;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
@@ -150,7 +153,7 @@ final class Printer {
         }
     }
 
-    public static void SamplePrint3(Types typeUtil, Elements elementUtil, Element targetElement, Messager messager) {
+    public static void SamplePrint3(Element targetElement) {
         final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/SamplePrint3_" + targetElement.getEnclosingElement() + "_" +
                 targetElement.getSimpleName() + "_" + targetElement
                 .asType() + ".txt";
@@ -168,16 +171,16 @@ final class Printer {
 
             FileWriter writer = new FileWriter(file, false);
             writer.write("Elements: \n");
-            elementUtil.printElements(writer, targetElement);
-            elementUtil.printElements(writer, executableElement);
+            Util.ElementUtils.printElements(writer, targetElement);
+            Util.ElementUtils.printElements(writer, executableElement);
 
             writer.write("\nParameters :" + executableElement.getParameters().size() + "\n");
             for (VariableElement ve : executableElement.getParameters()) {
-                writer.write("asElement: " + typeUtil.asElement(ve.asType()) + "\n");
+                writer.write("asElement: " + Util.TypeUtils.asElement(ve.asType()) + "\n");
                 TypeKind tKind = ve.asType().getKind();
                 writer.write("tKind: " + tKind + "\n");
                 if (tKind.isPrimitive()) {
-                    writer.write("PrimitiveType: " + typeUtil.getPrimitiveType(ve.asType().getKind()) + "\n");
+                    writer.write("PrimitiveType: " + Util.TypeUtils.getPrimitiveType(ve.asType().getKind()) + "\n");
                 } else {
                     writer.write("asType: " + ve.asType() + "\n");
                     if (tKind.equals(TypeKind.ARRAY)) {
@@ -189,8 +192,16 @@ final class Printer {
                         //类或接口
                         DeclaredType dt = (DeclaredType) ve.asType();
                         writer.write("dt:" + dt + "\n");
-                        Element eee = dt.asElement();
+                        TypeElement eee = (TypeElement) dt.asElement();
                         writer.write("eee:" + eee + "\n");
+                        List<TypeMirror> interfaces = (List<TypeMirror>) eee.getInterfaces();
+                        if (interfaces != null && interfaces.size() > 0) {
+                            TypeMirror tm = interfaces.get(0);
+                            writer.write("TypeName.get(List):" + TypeName.get(List.class) + "\n");
+                            writer.write("TypeName.get(Map):" + TypeName.get(Map.class) + "\n");
+                            writer.write("tm:" + Util.TypeUtils.asElement(tm).toString() + "\n");
+                        }
+                        writer.write("getInterfaces:" + eee.getInterfaces() + "\n");
                         for (TypeMirror tm : dt.getTypeArguments()) {
                             writer.write("tm:" + tm + "\n");
                         }
@@ -199,7 +210,7 @@ final class Printer {
             }
             writer.write("\nTypeParameters :" + executableElement.getTypeParameters().size());
             for (TypeParameterElement tpe : executableElement.getTypeParameters()) {
-                elementUtil.printElements(writer, tpe);
+                Util.ElementUtils.printElements(writer, tpe);
             }
 
             TypeMirror mirror = targetElement.asType();
@@ -222,7 +233,7 @@ final class Printer {
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
-            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+            Util.Messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
         }
     }
 
@@ -243,5 +254,38 @@ final class Printer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static void testPrint(String name, String str) {
+        final String fileLocation = "/home/trs/AndroidStudioProjects/RxBus/test_" + name + ".txt";
+        File file = new File(fileLocation);
+        try {
+            if (!file.exists())
+                file.createNewFile();
+            else {
+                file.delete();
+                file.createNewFile();
+            }
+            FileWriter writer = new FileWriter(file, false);
+            writer.write(str);
+            writer.flush();
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void PrintError(Element element, String format, Object... args) {
+        Print(Diagnostic.Kind.ERROR, element, format, args);
+    }
+
+    public static void PrintNote(Element element, String format, Object... args) {
+        Print(Diagnostic.Kind.NOTE, element, format, args);
+    }
+
+    private static void Print(Diagnostic.Kind kind, Element element, String format, Object... args) {
+        if (args.length > 0)
+            format = String.format(format, args);
+        Util.Messager.printMessage(kind, format, element);
     }
 }

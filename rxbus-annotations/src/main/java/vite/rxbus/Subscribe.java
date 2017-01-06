@@ -16,5 +16,7 @@ public @interface Subscribe {
      *
      * @return
      */
-    String[] value() default {"__default__"};
+    String[] value() default {DEFAULT};
+
+    String DEFAULT = "__default__";
 }

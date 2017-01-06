@@ -32,19 +32,13 @@ import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-
-import vite.rxbus.BindBuilder.MethodValue;
-
-import vite.rxbus.thread.RxComputation;
-import vite.rxbus.thread.RxIO;
-import vite.rxbus.thread.RxImmediate;
-import vite.rxbus.thread.RxMainThread;
-import vite.rxbus.thread.RxNewThread;
-import vite.rxbus.thread.RxTrampoline;
 
 import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
 
@@ -54,22 +48,15 @@ import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
 @AutoService(Processor.class)
 public class RxBusProProcessor extends AbstractProcessor {
 
-    private static final HashMap<TypeElement, BindBuilder> BindBuilderCache = new HashMap<>();
-
-    private HashSet<String> rxThreadTypes = new HashSet<>();
-
-    private Types mTypeUtils;//处理TypeMirror
-    private Elements mElementUtils;//处理Element
-    private Filer mFiler;//一般用于生成文件、获取文件
-    private Messager mMessager;//打印信息用
+    private static final Map<TypeElement, ProxyBuilder> PROXYS = new HashMap<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        mTypeUtils = processingEnv.getTypeUtils();
-        mElementUtils = processingEnv.getElementUtils();
-        mFiler = processingEnv.getFiler();
-        mMessager = processingEnv.getMessager();
+        Util.TypeUtils = processingEnv.getTypeUtils();
+        Util.ElementUtils = processingEnv.getElementUtils();
+        Util.Filer = processingEnv.getFiler();
+        Util.Messager = processingEnv.getMessager();
     }
 
     /**
@@ -82,23 +69,20 @@ public class RxBusProProcessor extends AbstractProcessor {
         //获取所有被目标注解标记的元素
         Set<Element> targetElements = (Set<Element>) roundEnv.getElementsAnnotatedWith(Subscribe.class);
         for (Element e : targetElements) {
-
             try {
                 if (!SuperficialValidation.validateElement(e))
                     continue;
                 if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                     continue;
 //                Printer.SamplePrint2(e);
-                Printer.SamplePrint3(mTypeUtils, mElementUtils, e, mMessager);
-
-                putBindBuilderCache(e);
+                Printer.SamplePrint3(e);
+                addProxy(e);
             } catch (Exception ee) {
                 ee.printStackTrace();
-                mMessager.printMessage(Diagnostic.Kind.ERROR, ee.getMessage());
+                Printer.PrintError(e, ee.getMessage());
             }
         }
-
-        createBinder();
+        createProxy();
         return true;
     }
 
@@ -111,14 +95,7 @@ public class RxBusProProcessor extends AbstractProcessor {
     public Set<String> getSupportedAnnotationTypes() {
         LinkedHashSet<String> types = new LinkedHashSet<>();
         types.add(Subscribe.class.getCanonicalName());
-
-        rxThreadTypes = new HashSet<>();
-        rxThreadTypes.add(RxMainThread.class.getCanonicalName());
-        rxThreadTypes.add(RxIO.class.getCanonicalName());
-        rxThreadTypes.add(RxComputation.class.getCanonicalName());
-        rxThreadTypes.add(RxNewThread.class.getCanonicalName());
-        rxThreadTypes.add(RxTrampoline.class.getCanonicalName());
-        rxThreadTypes.add(RxImmediate.class.getCanonicalName());
+        types.add(RxThread.class.getCanonicalName());
         return types;
     }
 
@@ -133,58 +110,70 @@ public class RxBusProProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    private void putBindBuilderCache(Element e) {
+    private void addProxy(Element e) {
         TypeElement clazz = (TypeElement) e.getEnclosingElement();
-        BindBuilder bindBuilder = BindBuilderCache.get(clazz);
-        if (bindBuilder == null) {
-            bindBuilder = new BindBuilder(ClassName.get(clazz));
-            BindBuilderCache.put(clazz, bindBuilder);
+        ProxyBuilder proxyBuilder = PROXYS.get(clazz);
+        if (proxyBuilder == null) {
+            proxyBuilder = new ProxyBuilder(ClassName.get(clazz));
+            PROXYS.put(clazz, proxyBuilder);
         }
 
-        Set<String> tags = new LinkedHashSet<>();
-        String name = e.getSimpleName().toString();
-        Class threadType = null;
-        VariableElement paramType = ((ExecutableElement) e).getParameters().get(0);
-        List<? extends AnnotationMirror> annoList = e.getAnnotationMirrors();
-        for (AnnotationMirror mirror : annoList) {
-            Element annoElement = mirror.getAnnotationType().asElement();
-            if (annoElement.getKind().equals(ANNOTATION_TYPE)) {
-                if (rxThreadTypes.contains(annoElement.toString())) {
-                    String threadName = annoElement.getSimpleName().toString();
-                    if ("RxMainThread".equals(threadName))
-                        threadType = RxMainThread.class;
-                    else if ("RxIO".equals(threadName))
-                        threadType = RxIO.class;
-                    else if ("RxComputation".equals(threadName))
-                        threadType = RxComputation.class;
-                    else if ("RxNewThread".equals(threadName))
-                        threadType = RxNewThread.class;
-                    else if ("RxTrampoline".equals(threadName))
-                        threadType = RxTrampoline.class;
-                    else if ("RxImmediate".equals(threadName))
-                        threadType = RxImmediate.class;
-                    else
-                        threadType = RxMainThread.class;
-                } else
-                    threadType = RxMainThread.class;
+        ThreadType threadType = ThreadType.Immediate;
+//        List<? extends AnnotationMirror> annoList = e.getAnnotationMirrors();
+//        for (AnnotationMirror mirror : annoList) {
+//            Element annoElement = mirror.getAnnotationType().asElement();
+//            if (annoElement.getKind().equals(ANNOTATION_TYPE)) {
+//                if (RxThread.class.getCanonicalName().equals(annoElement.toString())) {
+//                    Printer.PrintNote(mMessager, e, "Element is %s", e.getSimpleName().toString());
+//                    Printer.PrintNote(mMessager, e, "annoElement is %s", annoElement.getSimpleName().toString());
+//                    threadType = annoElement.getAnnotation(RxThread.class).value();
+//                }
+//            }
+//        }
+        RxThread rxThread = e.getAnnotation(RxThread.class);
+        if (rxThread != null)
+            threadType = rxThread.value();
 
-                Map<? extends ExecutableElement, ? extends AnnotationValue> map = mElementUtils.getElementValuesWithDefaults(mirror);
-                Iterator iter = map.entrySet().iterator();
-                while (iter.hasNext()) {
-                    Map.Entry entry = (Map.Entry) iter.next();
-                    //TODO : add tag
-                    List<String> values = (List<String>) ((AnnotationValue) entry.getValue()).getValue();
-                    tags.addAll(values);
+        MethodBinder methodBinder = new MethodBinder();
+        methodBinder.setMethodName(e.getSimpleName().toString());
+        methodBinder.setThreadType(threadType);
+
+        String[] tags = e.getAnnotation(Subscribe.class).value();
+        for (String tag : tags)
+            methodBinder.addTag(tag);
+
+        ExecutableElement executableElement = (ExecutableElement) e;
+        int size = executableElement.getParameters().size();
+        if (size > 1) {
+            Printer.PrintError(executableElement, "%s paramters size can't more than 1!", executableElement.getSimpleName().toString());
+        } else if (size == 1) {
+            VariableElement ve = executableElement.getParameters().get(0);
+            TypeKind kind = ve.asType().getKind();
+            if (kind.isPrimitive()) {
+                methodBinder.addParamType(Util.TypeUtils.getPrimitiveType(ve.asType().getKind()));
+            } else {
+                if (kind.equals(TypeKind.ARRAY)) {
+                    //数组
+                    methodBinder.addParamType((ArrayType) ve.asType());
+                } else if (kind.equals(TypeKind.DECLARED)) {
+                    //类或接口
+                    DeclaredType dt = (DeclaredType) ve.asType();
+                    methodBinder.addParamType(dt.asElement().asType());
+                    for (TypeMirror tm : dt.getTypeArguments()) {
+                        methodBinder.addParamType(tm);
+                    }
                 }
             }
-        }
+        } else {
 
-        MethodValue methodValue = bindBuilder.createMethodValue(name, threadType, paramType);
-        methodValue.setTag(tags);
+        }
+        proxyBuilder.addMethod(methodBinder);
     }
 
-    private void createBinder() {
-        for (BindBuilder builder : BindBuilderCache.values())
-            builder.build(mFiler);
+    private void createProxy() {
+        for (ProxyBuilder pb : PROXYS.values()) {
+            pb.build(Util.Filer);
+//            Printer.testPrint(pb.getClassName(), pb.toString());
+        }
     }
 }

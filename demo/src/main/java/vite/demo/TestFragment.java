@@ -11,9 +11,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
-import vite.rxbus.thread.RxImmediate;
-import vite.rxbus.thread.RxMainThread;
+import vite.rxbus.ThreadType;
 
 
 /**
@@ -124,20 +124,20 @@ public class TestFragment extends Fragment {
         tv.setText("void");
     }
 
-    @RxMainThread
+    @RxThread(ThreadType.MainThread)
     @Subscribe({"test1", "test2", "test3"})
     public void testTag1(String tag) {
         tv.setText("testTag " + tag);
     }
 
     @Subscribe("test2")
-    @RxImmediate
+    @RxThread(ThreadType.Immediate)
     public void testTag2(String tag) {
         Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
     @Subscribe("test3")
-    @RxImmediate
+    @RxThread(ThreadType.Immediate)
     public void testTag3(String tag) {
         Log.e("TestFragment", "testTag3 " + tag);
     }

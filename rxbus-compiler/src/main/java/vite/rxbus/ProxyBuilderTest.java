@@ -9,15 +9,14 @@ import java.io.File;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Created by trs on 16-11-29.
+ * Created by trs on 17-1-5.
  */
-public class BindBuilderTest {
-
+public class ProxyBuilderTest {
     @Test
     public void testCreateClass() {
         File file = new File("/home/trs/AndroidStudioProjects/RxBus/exampleTest");
-        File DemoTestClass = new File(file.getAbsolutePath() + "/vite/demo/MainActivity$$BusBinder.java");
-        BindBuilder builder = new BindBuilder(ClassName.get("vite.demo", "MainActivity"));
+        File DemoTestClass = new File(file.getAbsolutePath() + "/vite/demo/MainActivity$$Proxy.java");
+        ProxyBuilder builder = new ProxyBuilder(ClassName.get("vite.demo", "MainActivity"));
         builder.build(file);
 
         assertTrue(file.exists());

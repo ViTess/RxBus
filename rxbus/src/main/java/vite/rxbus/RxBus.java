@@ -1,65 +1,86 @@
 package vite.rxbus;
 
-import rx.Scheduler;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
-import vite.rxbus.thread.RxComputation;
-import vite.rxbus.thread.RxIO;
-import vite.rxbus.thread.RxImmediate;
-import vite.rxbus.thread.RxMainThread;
-import vite.rxbus.thread.RxNewThread;
-import vite.rxbus.thread.RxTrampoline;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by trs on 16-10-20.
  */
 public final class RxBus {
 
-//    private static final Bus bus = new RxBusImpl();
-//
-//    public static void register(Object target) {
-//        bus.register(target);
-//    }
-//
-//    public static void unregister(Object target) {
-//        bus.unregister(target);
-//    }
-//
-//    public static void post(String tag) {
-//        bus.post(tag);
-//    }
-//
-//    public static void post(String tag, Object value) {
-//        bus.post(tag, value);
-//    }
+    private static final Map<Class, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = new HashMap<>();
+    private static final Map<Class, BusProxy> PROXY_CACHE = new HashMap<>();
+    private static final Map<String, Set<BusProxy.SubjectFucker>> SUBJECTS = new ConcurrentHashMap<>();
 
-    public static final Scheduler getScheduler(Class clazz) {
-        if (RxMainThread.class.equals(clazz))
-            return AndroidSchedulers.mainThread();
-        if (RxIO.class.equals(clazz))
-            return Schedulers.io();
-        if (RxComputation.class.equals(clazz))
-            return Schedulers.computation();
-        if (RxNewThread.class.equals(clazz))
-            return Schedulers.newThread();
-        if (RxTrampoline.class.equals(clazz))
-            return Schedulers.trampoline();
-        if (RxImmediate.class.equals(clazz))
-            return Schedulers.immediate();
-
-        return AndroidSchedulers.mainThread();
+    public static void register(Object entity) {
+        BusProxy proxy = createProxy(entity);
+        proxy.register(entity);
+        proxy.mount(SUBJECTS);
     }
 
-    public static <T> void post(String tag , T value){
+    public static void unregister(Object entity) {
+        Class entityClass = entity.getClass();
+        BusProxy proxy = getProxy4Class(entityClass);
+        if (proxy != null)
+            proxy.unregister(entity);
     }
 
-    public interface Bus {
-        void register(Object target);
+    public static void post(Object value) {
+        post(Subscribe.DEFAULT, value);
+    }
 
-        void unregister(Object target);
+    public static void post(String tag, Object value) {
+        Set<BusProxy.SubjectFucker> subjects = SUBJECTS.get(tag);
+        if (subjects != null) {
+            for (BusProxy.SubjectFucker s : subjects) {
+                if (!s.subscription.isUnsubscribed())
+                    s.subject.onNext(value);
+                else
+                    subjects.remove(s);
+            }
+        }
+    }
 
-        void post(String tag);
+    private static BusProxy createProxy(Object entity) {
+        Class entityClass = entity.getClass();
+        BusProxy proxy = getProxy4Class(entityClass);
+        if (proxy == null) {
+            Constructor<? extends BusProxy> constructor = getConstructor4Class(entityClass);
+            try {
+                proxy = constructor.newInstance();
+            } catch (InstantiationException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+        return proxy;
+    }
 
-        void post(String tag, Object value);
+    private static BusProxy getProxy4Class(Class c) {
+        return PROXY_CACHE.get(c);
+    }
+
+    private static Constructor<? extends BusProxy> getConstructor4Class(Class c) {
+        Constructor<? extends BusProxy> constructor = CONSTRUCTOR_CACHE.get(c);
+        if (constructor == null) {
+            String targetName = c.getName();
+            try {
+                Class targetProxy = Class.forName(targetName + "$$Proxy");
+                constructor = targetProxy.getConstructor();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+            CONSTRUCTOR_CACHE.put(c, constructor);
+        }
+        return constructor;
     }
 }
