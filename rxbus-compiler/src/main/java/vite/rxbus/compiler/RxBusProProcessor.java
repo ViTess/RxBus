@@ -1,46 +1,27 @@
-package vite.rxbus;
+package vite.rxbus.compiler;
 
-import com.google.auto.common.SuperficialValidation;
+import com.google.auto.common .SuperficialValidation;
 import com.google.auto.service.AutoService;
-import com.google.common.collect.HashMultimap;
 import com.squareup.javapoet.ClassName;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
 
-import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
+import vite.rxbus.RxThread;
+import vite.rxbus.Subscribe;
+import vite.rxbus.ThreadType;
 
 /**
  * Created by trs on 16-11-24.
@@ -148,22 +129,7 @@ public class RxBusProProcessor extends AbstractProcessor {
             Printer.PrintError(executableElement, "%s paramters size can't more than 1!", executableElement.getSimpleName().toString());
         } else if (size == 1) {
             VariableElement ve = executableElement.getParameters().get(0);
-            TypeKind kind = ve.asType().getKind();
-            if (kind.isPrimitive()) {
-                methodBinder.addParamType(Util.TypeUtils.getPrimitiveType(ve.asType().getKind()));
-            } else {
-                if (kind.equals(TypeKind.ARRAY)) {
-                    //数组
-                    methodBinder.addParamType((ArrayType) ve.asType());
-                } else if (kind.equals(TypeKind.DECLARED)) {
-                    //类或接口
-                    DeclaredType dt = (DeclaredType) ve.asType();
-                    methodBinder.addParamType(dt.asElement().asType());
-                    for (TypeMirror tm : dt.getTypeArguments()) {
-                        methodBinder.addParamType(tm);
-                    }
-                }
-            }
+            methodBinder.setParamType(ve.asType());
         } else {
 
         }

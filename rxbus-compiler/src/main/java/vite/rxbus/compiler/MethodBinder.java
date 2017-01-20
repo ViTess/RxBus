@@ -1,4 +1,4 @@
-package vite.rxbus;
+package vite.rxbus.compiler;
 
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Set;
 
 import javax.lang.model.type.TypeMirror;
+
+import vite.rxbus.ThreadType;
 
 /**
  * Created by trs on 17-1-5.
@@ -15,11 +17,10 @@ final class MethodBinder {
     private String mMethodName;
     private Set<String> mTags;
     private ThreadType mThreadType;
-    private List<TypeMirror> mParamTypes;//参数类型
+    private TypeMirror mParamType;
 
     public MethodBinder() {
         mTags = new LinkedHashSet<>();
-        mParamTypes = new LinkedList<>();
     }
 
     public void setMethodName(String name) {
@@ -46,12 +47,12 @@ final class MethodBinder {
         return mTags;
     }
 
-    public void addParamType(TypeMirror typeMirror) {
-        mParamTypes.add(typeMirror);
+    public void setParamType(TypeMirror typeMirror) {
+        mParamType = typeMirror;
     }
 
-    public List<TypeMirror> getParamTypes() {
-        return mParamTypes;
+    public TypeMirror getParamTypes() {
+        return mParamType;
     }
 
     @Override
@@ -60,7 +61,7 @@ final class MethodBinder {
                 "mMethodName='" + mMethodName + '\'' +
                 ", mTags=" + mTags +
                 ", mThreadType=" + mThreadType +
-                ", mParamTypes=" + mParamTypes +
+                ", mParamType=" + mParamType +
                 '}';
     }
 }

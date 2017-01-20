@@ -23,23 +23,32 @@ public class BusProxy<T> {
     protected final HashSet<T> Entitys = new HashSet<>();
     protected final HashMap<String, Set<SubjectFucker>> SubjectMap = new HashMap<>();
 
-    protected void createMethod(String tag, Scheduler scheduler, Func1 filter, final ProxyAction<T> proxyAction) {
+    protected <V> void createMethod(String tag, Scheduler scheduler, final ProxyAction<T, V> proxyAction) {
         SubjectFucker fucker = new SubjectFucker();
         fucker.subject = PublishSubject.create();
         fucker.subscription = fucker.subject
-                .filter(new Func1<Object, Boolean>() {
+                .filter(new Func1<V, Boolean>() {
                     @Override
-                    public Boolean call(Object o) {
-                        return o != null;
+                    public Boolean call(V v) {
+                        return v != null;
                     }
                 })
-                .filter(filter)
-                .subscribeOn(scheduler)
-                .subscribe(new Action1() {
+                .map(new Func1() {
                     @Override
-                    public void call(Object o) {
+                    public Object call(Object o) {
+                        return null;
+                    }
+                })
+                .subscribeOn(scheduler)
+                .subscribe(new Action1<V>() {
+                    @Override
+                    public void call(V v) {
                         for (T t : Entitys) {
-                            proxyAction.toDo(t, o);
+                            try {
+                                proxyAction.toDo(t, v);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }, new Action1<Throwable>() {
@@ -98,8 +107,8 @@ public class BusProxy<T> {
         }
     }
 
-    protected interface ProxyAction<T> {
-        void toDo(T t, Object o);
+    protected interface ProxyAction<T, V> {
+        void toDo(T t, V v);
     }
 
     protected static final class SubjectFucker {

@@ -1,4 +1,4 @@
-package vite.rxbus;
+package vite.rxbus.compiler;
 
 import com.squareup.javapoet.TypeName;
 

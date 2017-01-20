@@ -12,19 +12,12 @@ import vite.rxbus.BusProxy;
  */
 public final class MainActivity$$Proxy_test extends BusProxy<MainActivity> {
     public MainActivity$$Proxy_test() {
-        createMethod("test1", AndroidSchedulers.mainThread(), new Func1<Object, Boolean>() {
-            @Override
-            public Boolean call(Object o) {
-                if (o instanceof ArrayList) {
-
-                }
-                return false;
-            }
-        }, new ProxyAction<MainActivity>() {
-            @Override
-            public void toDo(MainActivity mainActivity, Object o) {
-                mainActivity.test(Integer.class.cast(o));
-            }
-        });
+        createMethod("test1", AndroidSchedulers.mainThread()
+                , new ProxyAction<MainActivity, Integer>() {
+                    @Override
+                    public void toDo(MainActivity mainActivity, Integer v) {
+                        mainActivity.test(v);
+                    }
+                });
     }
 }

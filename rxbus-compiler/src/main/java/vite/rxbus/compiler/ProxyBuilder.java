@@ -1,4 +1,4 @@
-package vite.rxbus;
+package vite.rxbus.compiler;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -11,18 +11,16 @@ import com.squareup.javapoet.TypeVariableName;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+
+import vite.rxbus.ThreadType;
 
 /**
  * Created by trs on 17-1-5.
@@ -108,7 +106,7 @@ final class ProxyBuilder {
             ClassName thread = getRxThread(binder.getThreadType());
 
             CodeBlock.Builder b = CodeBlock.builder();
-            b.addStatement("createMethod($S\n,$T()\n,$L\n,$L)", tag, thread, createFunc1(binder.getParamTypes()), createProxyAction(binder));
+            b.addStatement("createMethod($S\n,$T()\n,$L)", tag, thread, createProxyAction(binder));
             builder.add(b.build());
         }
         return builder.build();
@@ -139,26 +137,41 @@ final class ProxyBuilder {
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("toDo")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(mTargetClassName, "target")
-                .addParameter(Object.class, "o");
+                .addParameter(mTargetClassName, "target");
 
-        if (binder.getParamTypes().size() > 0) {
-            TypeName typeName;
-            TypeMirror paramType = binder.getParamTypes().get(0);
+//        if (binder.getParamTypes().size() > 0) {
+//            TypeName typeName;
+//            TypeMirror paramType = binder.getParamTypes().get(0);
+//            if (paramType.getKind().isPrimitive()) {
+//                typeName = TypeName.get(paramType);
+//                if (!typeName.isBoxedPrimitive())
+//                    typeName = typeName.box();
+//            } else if (paramType.getKind().equals(TypeKind.ARRAY))
+//                typeName = TypeName.get(paramType);
+//            else
+//                typeName = ClassName.get((TypeElement) Util.TypeUtils.asElement(paramType));
+//            methodBuilder.addStatement("target." + binder.getMethodName() + "($T.class.cast(o))", typeName);
+//        } else
+//            methodBuilder.addStatement("target." + binder.getMethodName() + "()");
+
+        TypeMirror paramType = binder.getParamTypes();
+        TypeName typeName;
+        if (paramType == null) {
+            typeName = ClassName.get("java.lang", "Object");
+            methodBuilder.addStatement("target." + binder.getMethodName() + "()");
+        } else {
             if (paramType.getKind().isPrimitive()) {
                 typeName = TypeName.get(paramType);
                 if (!typeName.isBoxedPrimitive())
                     typeName = typeName.box();
-            } else if (paramType.getKind().equals(TypeKind.ARRAY))
-                typeName = TypeName.get(paramType);
-            else
-                typeName = ClassName.get((TypeElement) Util.TypeUtils.asElement(paramType));
-            methodBuilder.addStatement("target." + binder.getMethodName() + "($T.class.cast(o))", typeName);
-        } else
-            methodBuilder.addStatement("target." + binder.getMethodName() + "()");
+            } else
+                typeName = ClassName.get(paramType);
+            methodBuilder.addStatement("target." + binder.getMethodName() + "(o)");
+        }
+        methodBuilder.addParameter(typeName, "o");
 
         TypeSpec proxyAction = TypeSpec.anonymousClassBuilder("")
-                .addSuperinterface(ParameterizedTypeName.get(PROXY_ACTION, mTargetClassName))
+                .addSuperinterface(ParameterizedTypeName.get(PROXY_ACTION, mTargetClassName, typeName))
                 .addMethod(methodBuilder.build())
                 .build();
         return proxyAction;

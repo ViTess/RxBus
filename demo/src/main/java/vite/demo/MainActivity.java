@@ -1,5 +1,6 @@
 package vite.demo;
 
+import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -133,8 +134,8 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     public void testMap(HashMap<Integer, String> map) {
     }
 
-    @Subscribe
+    @Subscribe(TAG)
     public void testMoreMap(HashMap<Map<String, Integer>, Map<Float, Entity>> map) {
-
+        Log.v("MainActivity", "testMoreMap");
     }
 }

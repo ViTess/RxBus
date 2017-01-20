@@ -4,4 +4,6 @@ sourceCompatibility = rootProject.ext.sourceCompatibilityVersion
 targetCompatibility = rootProject.ext.targetCompatibilityVersion
 
 dependencies {
+    compile deps.lint_api
+    compile deps.lint_checks
 }

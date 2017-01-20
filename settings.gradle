@@ -1,1 +1,1 @@
-include ':demo', ':rxbus', ':rxbus-annotations', ':rxbus-compiler'
+include ':demo', ':rxbus', ':rxbus-annotations', ':rxbus-compiler', ':rxbus-lint'
