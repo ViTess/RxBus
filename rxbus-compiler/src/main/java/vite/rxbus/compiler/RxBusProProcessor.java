@@ -99,7 +99,7 @@ public class RxBusProProcessor extends AbstractProcessor {
             PROXYS.put(clazz, proxyBuilder);
         }
 
-        ThreadType threadType = ThreadType.Immediate;
+        ThreadType threadType = ThreadType.MainThread;
 //        List<? extends AnnotationMirror> annoList = e.getAnnotationMirrors();
 //        for (AnnotationMirror mirror : annoList) {
 //            Element annoElement = mirror.getAnnotationType().asElement();

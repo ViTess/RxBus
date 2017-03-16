@@ -9,12 +9,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import rx.Scheduler;
-import rx.Subscription;
-import rx.functions.Action1;
-import rx.functions.Func1;
-import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
+import io.reactivex.Scheduler;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Predicate;
+import io.reactivex.processors.PublishProcessor;
 
 /**
  * Created by trs on 17-1-4.
@@ -25,36 +24,25 @@ public class BusProxy<T> {
 
     protected <V> void createMethod(String tag, Scheduler scheduler, final ProxyAction<T, V> proxyAction) {
         SubjectFucker fucker = new SubjectFucker();
-        fucker.subject = PublishSubject.create();
-        fucker.subscription = fucker.subject
-                .filter(new Func1<V, Boolean>() {
+        fucker.processor = PublishProcessor.create();
+        fucker.disposable = fucker.processor
+                .filter(new Predicate<V>() {
                     @Override
-                    public Boolean call(V v) {
+                    public boolean test(V v) throws Exception {
                         return v != null;
                     }
                 })
-                .map(new Func1() {
-                    @Override
-                    public Object call(Object o) {
-                        return null;
-                    }
-                })
                 .subscribeOn(scheduler)
-                .subscribe(new Action1<V>() {
+                .subscribe(new Consumer<V>() {
                     @Override
-                    public void call(V v) {
+                    public void accept(V v) throws Exception {
                         for (T t : Entitys) {
-                            try {
-                                proxyAction.toDo(t, v);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                            proxyAction.toDo(t, v);
                         }
                     }
-                }, new Action1<Throwable>() {
+                }, new Consumer<Throwable>() {
                     @Override
-                    public void call(Throwable throwable) {
-                        //maybe cast error
+                    public void accept(Throwable throwable) throws Exception {
                         Log.e("RxBus", throwable.getMessage());
                     }
                 });
@@ -69,8 +57,8 @@ public class BusProxy<T> {
     protected void post(String tag, Object value) {
         Set<SubjectFucker> fuckers = SubjectMap.get(tag);
         for (SubjectFucker f : fuckers) {
-            if (!f.subscription.isUnsubscribed())
-                f.subject.onNext(value);
+            if (!f.disposable.isDisposed())
+                f.processor.onNext(value);
         }
     }
 
@@ -86,7 +74,7 @@ public class BusProxy<T> {
                 Map.Entry<String, Set<SubjectFucker>> entry = (Map.Entry<String, Set<SubjectFucker>>) iter.next();
                 Set<SubjectFucker> fuckers = entry.getValue();
                 for (SubjectFucker fucker : fuckers)
-                    fucker.subscription.unsubscribe();
+                    fucker.disposable.dispose();
             }
         }
     }
@@ -112,7 +100,7 @@ public class BusProxy<T> {
     }
 
     protected static final class SubjectFucker {
-        Subject subject;
-        Subscription subscription;
+        PublishProcessor processor;
+        Disposable disposable;
     }
 }

@@ -37,8 +37,8 @@ public final class RxBus {
         Set<BusProxy.SubjectFucker> subjects = SUBJECTS.get(tag);
         if (subjects != null) {
             for (BusProxy.SubjectFucker s : subjects) {
-                if (!s.subscription.isUnsubscribed())
-                    s.subject.onNext(value);
+                if (!s.disposable.isDisposed())
+                    s.processor.onNext(value);
                 else
                     subjects.remove(s);
             }

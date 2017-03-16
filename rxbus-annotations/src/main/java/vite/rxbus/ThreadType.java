@@ -8,7 +8,7 @@ public enum ThreadType {
     MainThread,
     IO,
     Computation,
-    Immediate,
+    Single,
     NewThread,
     Trampoline
 }

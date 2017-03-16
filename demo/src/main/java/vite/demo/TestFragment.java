@@ -131,13 +131,13 @@ public class TestFragment extends Fragment {
     }
 
     @Subscribe("test2")
-    @RxThread(ThreadType.Immediate)
+    @RxThread(ThreadType.Single)
     public void testTag2(String tag) {
         Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
     @Subscribe("test3")
-    @RxThread(ThreadType.Immediate)
+    @RxThread(ThreadType.Single)
     public void testTag3(String tag) {
         Log.e("TestFragment", "testTag3 " + tag);
     }
