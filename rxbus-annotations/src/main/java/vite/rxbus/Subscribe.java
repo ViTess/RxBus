@@ -18,5 +18,8 @@ public @interface Subscribe {
      */
     String[] value() default {DEFAULT};
 
-    String DEFAULT = "__default__";
+    /**
+     * random strings
+     */
+    String DEFAULT = "2d51$5,0";
 }

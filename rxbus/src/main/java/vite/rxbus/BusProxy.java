@@ -5,27 +5,47 @@ import android.util.Log;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import io.reactivex.Scheduler;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Predicate;
+import io.reactivex.internal.functions.Functions;
+import io.reactivex.internal.operators.flowable.FlowableInternalHelper;
 import io.reactivex.processors.PublishProcessor;
 
 /**
  * Created by trs on 17-1-4.
  */
 public class BusProxy<T> {
-    protected final HashSet<T> Entitys = new HashSet<>();
+    protected final Set<T> Entitys = new LinkedHashSet<>();
+    protected final Set<Disposable> Disposables = new LinkedHashSet<>();
     protected final HashMap<String, Set<SubjectFucker>> SubjectMap = new HashMap<>();
 
     protected <V> void createMethod(String tag, Scheduler scheduler, final ProxyAction<T, V> proxyAction) {
         SubjectFucker fucker = new SubjectFucker();
-        fucker.processor = PublishProcessor.create();
-        fucker.disposable = fucker.processor
+        fucker.processor = BusProcessor.create();
+
+        BusSubscriber<V> busSubscriber = new BusSubscriber<>(new Consumer<V>() {
+            @Override
+            public void accept(V v) throws Exception {
+                for (T t : Entitys) {
+                    proxyAction.toDo(t, v);
+                }
+            }
+        }, new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) throws Exception {
+                Log.e("RxBus", throwable.getMessage());
+            }
+        }, Functions.EMPTY_ACTION, FlowableInternalHelper.RequestMax.INSTANCE);
+
+        fucker.disposable = (Disposable) fucker.processor
                 .filter(new Predicate<V>() {
                     @Override
                     public boolean test(V v) throws Exception {
@@ -33,19 +53,7 @@ public class BusProxy<T> {
                     }
                 })
                 .subscribeOn(scheduler)
-                .subscribe(new Consumer<V>() {
-                    @Override
-                    public void accept(V v) throws Exception {
-                        for (T t : Entitys) {
-                            proxyAction.toDo(t, v);
-                        }
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        Log.e("RxBus", throwable.getMessage());
-                    }
-                });
+                .subscribeWith(busSubscriber);
         Set<SubjectFucker> fuckers = SubjectMap.get(tag);
         if (fuckers == null) {
             fuckers = new CopyOnWriteArraySet<>();
@@ -100,7 +108,7 @@ public class BusProxy<T> {
     }
 
     protected static final class SubjectFucker {
-        PublishProcessor processor;
+        BusProcessor processor;
         Disposable disposable;
     }
 }

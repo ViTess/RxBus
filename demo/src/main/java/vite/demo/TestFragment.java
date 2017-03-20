@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import vite.rxbus.RxBus;
 import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
 import vite.rxbus.ThreadType;
@@ -69,6 +70,13 @@ public class TestFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        RxBus.register(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        RxBus.unregister(this);
     }
 
     @Override

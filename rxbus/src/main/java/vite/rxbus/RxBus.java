@@ -1,5 +1,7 @@
 package vite.rxbus;
 
+import android.support.annotation.NonNull;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -29,11 +31,15 @@ public final class RxBus {
             proxy.unregister(entity);
     }
 
-    public static void post(Object value) {
+    public static void post(@NonNull Object value) {
         post(Subscribe.DEFAULT, value);
     }
 
-    public static void post(String tag, Object value) {
+    /**
+     * @param tag
+     * @param value in RxJava2.0 , Null is unsupport
+     */
+    public static void post(String tag, @NonNull Object value) {
         Set<BusProxy.SubjectFucker> subjects = SUBJECTS.get(tag);
         if (subjects != null) {
             for (BusProxy.SubjectFucker s : subjects) {

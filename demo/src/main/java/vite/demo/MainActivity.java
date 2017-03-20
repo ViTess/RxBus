@@ -85,7 +85,15 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                 RxBus.post(TAG, random.nextInt());
                 break;
             case R.id.main_bt_void:
+                /* RxJava2.0 not allow Null */
 //                RxBus.post(null);
+                HashMap<Map<String, Integer>, Map<Float, Entity>> map = new HashMap<>();
+                Map<String, Integer> key = new HashMap<>();
+                Map<Float, Entity> value = new HashMap<>();
+                key.put("testmap", 47);
+                value.put(0.25f, new Entity("p1", "p2"));
+                map.put(key, value);
+                RxBus.post(TAG, map);
                 break;
             case R.id.main_bt_tag1:
 //                RxBus.post("test1", "Main Button Tag1");
