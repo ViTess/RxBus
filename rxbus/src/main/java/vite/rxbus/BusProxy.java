@@ -23,17 +23,16 @@ import io.reactivex.processors.PublishProcessor;
  * Created by trs on 17-1-4.
  */
 public class BusProxy<T> {
-    protected final Set<T> Entitys = new LinkedHashSet<>();
-    protected final Set<Disposable> Disposables = new LinkedHashSet<>();
+    protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
     protected final HashMap<String, Set<SubjectFucker>> SubjectMap = new HashMap<>();
 
     protected <V> void createMethod(String tag, Scheduler scheduler, final ProxyAction<T, V> proxyAction) {
         SubjectFucker fucker = new SubjectFucker();
         fucker.processor = BusProcessor.create();
-
         BusSubscriber<V> busSubscriber = new BusSubscriber<>(new Consumer<V>() {
             @Override
             public void accept(V v) throws Exception {
+                //TODO:thread-safe Entitys
                 for (T t : Entitys) {
                     proxyAction.toDo(t, v);
                 }

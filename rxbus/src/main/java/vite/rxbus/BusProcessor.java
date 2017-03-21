@@ -122,7 +122,7 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
             int n = a.length;
             int j = -1;
             for (int i = 0; i < n; i++) {
-                if (a[i] == ps) {
+                if (a[i].equals(ps)) {
                     j = i;
                     break;
                 }
@@ -297,6 +297,16 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
 
         public boolean isCancelled() {
             return get() == Long.MIN_VALUE;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof BusSubscription) {
+                BusSubscription bus = (BusSubscription) obj;
+                if (bus.actual.hashCode() == this.actual.hashCode())
+                    return true;
+            }
+            return false;
         }
     }
 }
