@@ -4,5 +4,5 @@ package vite.rxbus;
  * Created by trs on 17-3-21.
  */
 
-public class IAction {
+public class BusProxy2 {
 }

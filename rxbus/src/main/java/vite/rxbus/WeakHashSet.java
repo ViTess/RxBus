@@ -8,13 +8,13 @@ import java.util.Iterator;
 /**
  * Created by trs on 17-3-21.
  */
-final class WeakHashSet<T> extends HashSet {
+final class WeakHashSet<T> extends HashSet<T> {
 
     private ReferenceQueue mRefQueue = new ReferenceQueue();
 
     @Override
     public boolean add(Object o) {
-        return super.add(new WeakNode(o, mRefQueue));
+        return super.add((T) new WeakNode(o, mRefQueue));
     }
 
     @Override
@@ -67,7 +67,8 @@ final class WeakHashSet<T> extends HashSet {
 
         @Override
         public Object next() {
-            return iter.next() == null ? null : ((WeakReference) iter.next()).get();
+            Object obj = iter.next();
+            return obj == null ? null : ((WeakReference) obj).get();
         }
 
         @Override
