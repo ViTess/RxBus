@@ -25,11 +25,10 @@ import io.reactivex.processors.PublishProcessor;
  */
 public class BusProxy<T> {
     protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
-    protected final HashMap<String, Set<SubjectFucker>> SubjectMap = new HashMap<>();
+    protected final HashMap<String, Set<BusProcessor<T>>> SubjectMap = new HashMap<>();
 
-    protected <V> void createMethod(String tag, Scheduler scheduler, final ProxyAction<T, V> proxyAction) {
-        SubjectFucker fucker = new SubjectFucker();
-        fucker.processor = BusProcessor.create();
+    protected <V> void createMethod(String tag, Scheduler scheduler, final IAction<T, V> proxyAction) {
+        BusProcessor p = BusProcessor.create();
         BusSubscriber<V> busSubscriber = new BusSubscriber<>(new Consumer<V>() {
             @Override
             public void accept(V v) throws Exception {
@@ -45,29 +44,26 @@ public class BusProxy<T> {
             }
         }, Functions.EMPTY_ACTION, FlowableInternalHelper.RequestMax.INSTANCE);
 
-        fucker.disposable = (Disposable) fucker.processor
-                .filter(new Predicate<V>() {
-                    @Override
-                    public boolean test(V v) throws Exception {
-                        return v != null;
-                    }
-                })
+        p.filter(new Predicate<V>() {
+            @Override
+            public boolean test(V v) throws Exception {
+                return v != null;
+            }
+        })
                 .subscribeOn(scheduler)
                 .subscribeWith(busSubscriber);
-        Set<SubjectFucker> fuckers = SubjectMap.get(tag);
-        if (fuckers == null) {
-            fuckers = new CopyOnWriteArraySet<>();
-            SubjectMap.put(tag, fuckers);
+        Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
+        if (bPros == null) {
+            bPros = new HashSet<>();
+            SubjectMap.put(tag, bPros);
         }
-        fuckers.add(fucker);
+        bPros.add(p);
     }
 
     protected void post(String tag, Object value) {
-        Set<SubjectFucker> fuckers = SubjectMap.get(tag);
-        for (SubjectFucker f : fuckers) {
-            if (!f.disposable.isDisposed())
-                f.processor.onNext(value);
-        }
+        Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
+        for (BusProcessor p : bPros)
+            p.onNext(value);
     }
 
     protected void register(T entity) {
@@ -78,35 +74,26 @@ public class BusProxy<T> {
         Entitys.remove(entity);
         if (Entitys.size() == 0) {
             for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
-                Map.Entry<String, Set<SubjectFucker>> entry = (Map.Entry<String, Set<SubjectFucker>>) iter.next();
-                Set<SubjectFucker> fuckers = entry.getValue();
-                for (SubjectFucker fucker : fuckers)
-                    fucker.disposable.dispose();
+                Map.Entry<String, Set<BusProcessor>> entry = (Map.Entry<String, Set<BusProcessor>>) iter.next();
+                Set<BusProcessor> bPros = entry.getValue();
+                for (BusProcessor p : bPros)
+                    p.dispose();
             }
         }
     }
 
-    protected void mount(Map<String, Set<BusProxy.SubjectFucker>> map) {
+    protected void mount(Map<String, Set<BusProcessor>> map) {
         for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
-            Map.Entry<String, Set<SubjectFucker>> entry = (Map.Entry<String, Set<SubjectFucker>>) iter.next();
+            Map.Entry<String, Set<BusProcessor>> entry = (Map.Entry<String, Set<BusProcessor>>) iter.next();
             String tag = entry.getKey();
-            Set<SubjectFucker> fuckers = entry.getValue();
+            Set<BusProcessor> bPros = entry.getValue();
 
-            Set<SubjectFucker> allFuckers = map.get(tag);
-            if (allFuckers == null) {
-                allFuckers = new CopyOnWriteArraySet<>();
-                map.put(tag, allFuckers);
+            Set<BusProcessor> allBPros = map.get(tag);
+            if (allBPros == null) {
+                allBPros = new CopyOnWriteArraySet<>();
+                map.put(tag, allBPros);
             }
-            allFuckers.addAll(fuckers);
+            allBPros.addAll(bPros);
         }
-    }
-
-    protected interface ProxyAction<T, V> {
-        void toDo(T t, V v);
-    }
-
-    protected static final class SubjectFucker {
-        BusProcessor processor;
-        Disposable disposable;
     }
 }

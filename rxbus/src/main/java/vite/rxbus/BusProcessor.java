@@ -186,6 +186,23 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
         return subscriber.get() == TERMINATED && error == null;
     }
 
+    public void dispose() {
+        BusSubscription<T> s = subscriber.get();
+        if (s == TERMINATED || s == EMPTY)
+            return;
+
+        s.onComplete();
+        s.cancel();
+    }
+
+    public boolean isDispose() {
+        BusSubscription<T> s = subscriber.get();
+        if (s == TERMINATED || s == EMPTY)
+            return true;
+
+        return s.isCancelled();
+    }
+
     /**
      * Wraps the actual subscriber, tracks its requests and makes cancellation
      * to remove itself from the current subscribers array.

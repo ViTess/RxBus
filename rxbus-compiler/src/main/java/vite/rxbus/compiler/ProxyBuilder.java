@@ -30,7 +30,7 @@ final class ProxyBuilder {
 
     private static final ClassName BUSPROXY = ClassName.get("vite.rxbus", "BusProxy");
     private static final ClassName FILTER_FUNC = ClassName.get("io.reactivex.functions", "Predicate");
-    private static final ClassName PROXY_ACTION = ClassName.get("", "ProxyAction");
+    private static final ClassName PROXY_ACTION = ClassName.get("vite.rxbus", "IAction");
     private static final ClassName SCHEDULER_MAIN = ClassName.get("io.reactivex.android.schedulers", "AndroidSchedulers", "mainThread");
     private static final ClassName SCHEDULER_IO = ClassName.get("io.reactivex.schedulers", "Schedulers", "io");
     private static final ClassName SCHEDULER_COMPUTATION = ClassName.get("io.reactivex.schedulers", "Schedulers", "computation");

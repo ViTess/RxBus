@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class RxBus {
 
-    private static final Map<Class, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = new HashMap<>();
-    private static final Map<Class, BusProxy> PROXY_CACHE = new HashMap<>();
-    private static final Map<String, Set<BusProxy.SubjectFucker>> SUBJECTS = new ConcurrentHashMap<>();
+    private static final Map<Class, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Set<BusProcessor>> SUBJECTS = new ConcurrentHashMap<>();
 
     public static void register(Object entity) {
         BusProxy proxy = createProxy(entity);
@@ -40,13 +40,13 @@ public final class RxBus {
      * @param value in RxJava2.0 , Null is unsupport
      */
     public static void post(String tag, @NonNull Object value) {
-        Set<BusProxy.SubjectFucker> subjects = SUBJECTS.get(tag);
+        Set<BusProcessor> subjects = SUBJECTS.get(tag);
         if (subjects != null) {
-            for (BusProxy.SubjectFucker s : subjects) {
-                if (!s.disposable.isDisposed())
-                    s.processor.onNext(value);
+            for (BusProcessor p : subjects) {
+                if (!p.isDispose())
+                    p.onNext(value);
                 else
-                    subjects.remove(s);
+                    subjects.remove(p);
             }
         }
     }
