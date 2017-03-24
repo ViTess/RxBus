@@ -18,21 +18,17 @@ import io.reactivex.processors.FlowableProcessor;
  * Created by trs on 17-3-20.
  */
 final class BusProcessor<T> extends FlowableProcessor<T> {
-    /**
-     * The terminated indicator for the subscribers array.
-     */
-    @SuppressWarnings("rawtypes")
-    static final BusSubscription[] TERMINATED = new BusSubscription[0];
+    static final BusSubscription TERMINATED = new BusSubscription(null, null);
     /**
      * An empty subscribers array to avoid allocating it all the time.
      */
     @SuppressWarnings("rawtypes")
-    static final BusSubscription[] EMPTY = new BusSubscription[0];
+    static final BusSubscription EMPTY = new BusSubscription(null, null);
 
     /**
      * The array of currently subscribed subscribers.
      */
-    final AtomicReference<BusSubscription<T>[]> subscribers;
+    final AtomicReference<BusSubscription<T>> subscriber;
 
     /**
      * The error, write before terminating and read after checking subscribers.
@@ -56,7 +52,7 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
      */
     @SuppressWarnings("unchecked")
     BusProcessor() {
-        subscribers = new AtomicReference<BusSubscription<T>[]>(EMPTY);
+        subscriber = new AtomicReference<BusSubscription<T>>(EMPTY);
     }
 
 
@@ -80,68 +76,36 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
         }
     }
 
-    /**
-     * Tries to add the given subscriber to the subscribers array atomically
-     * or returns false if the subject has terminated.
-     *
-     * @param ps the subscriber to add
-     * @return true if successful, false if the subject has terminated
-     */
     boolean add(BusSubscription<T> ps) {
         for (; ; ) {
-            BusSubscription<T>[] a = subscribers.get();
-            if (a == TERMINATED) {
+            BusSubscription<T> a = subscriber.get();
+            if (a == TERMINATED || a != EMPTY) {
                 return false;
             }
 
-            int n = a.length;
-            @SuppressWarnings("unchecked")
-            BusSubscription<T>[] b = new BusSubscription[n + 1];
-            System.arraycopy(a, 0, b, 0, n);
-            b[n] = ps;
+            BusSubscription b = ps;
 
-            if (subscribers.compareAndSet(a, b)) {
+            if (subscriber.compareAndSet(a, b)) {
                 return true;
             }
         }
     }
 
-    /**
-     * Atomically removes the given subscriber if it is subscribed to the subject.
-     *
-     * @param ps the subject to remove
-     */
     @SuppressWarnings("unchecked")
     void remove(BusSubscription<T> ps) {
         for (; ; ) {
-            BusSubscription<T>[] a = subscribers.get();
+            BusSubscription<T> a = subscriber.get();
             if (a == TERMINATED || a == EMPTY) {
                 return;
             }
 
-            int n = a.length;
-            int j = -1;
-            for (int i = 0; i < n; i++) {
-                if (a[i].equals(ps)) {
-                    j = i;
-                    break;
-                }
-            }
-
-            if (j < 0) {
+            if (!a.equals(ps)) {
                 return;
             }
 
-            BusSubscription<T>[] b;
+            BusSubscription<T> b = TERMINATED;
 
-            if (n == 1) {
-                b = EMPTY;
-            } else {
-                b = new BusSubscription[n - 1];
-                System.arraycopy(a, 0, b, 0, j);
-                System.arraycopy(a, j + 1, b, j, n - j - 1);
-            }
-            if (subscribers.compareAndSet(a, b)) {
+            if (subscriber.compareAndSet(a, b)) {
                 return;
             }
         }
@@ -149,7 +113,7 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
 
     @Override
     public void onSubscribe(Subscription s) {
-        if (subscribers.get() == TERMINATED) {
+        if (subscriber.get() == TERMINATED) {
             s.cancel();
             return;
         }
@@ -159,22 +123,23 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
 
     @Override
     public void onNext(T t) {
-        if (subscribers.get() == TERMINATED) {
+        BusSubscription<T> s = subscriber.get();
+        if (s == TERMINATED || s == EMPTY) {
             return;
         }
         if (t == null) {
             onError(new NullPointerException("onNext called with null. Null values are generally not allowed in 2.x operators and sources."));
             return;
         }
-        for (BusSubscription<T> s : subscribers.get()) {
-            s.onNext(t);
-        }
+
+        s.onNext(t);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void onError(Throwable t) {
-        if (subscribers.get() == TERMINATED) {
+        BusSubscription<T> s = subscriber.get();
+        if (s == TERMINATED || s == EMPTY) {
             RxJavaPlugins.onError(t);
             return;
         }
@@ -183,30 +148,29 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
         }
         error = t;
 
-        for (BusSubscription<T> s : subscribers.getAndSet(TERMINATED)) {
-            s.onError(t);
-        }
+        s.onError(t);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void onComplete() {
-        if (subscribers.get() == TERMINATED) {
+        BusSubscription<T> s = subscriber.get();
+        if (s == TERMINATED) {
             return;
         }
-        for (BusSubscription<T> s : subscribers.getAndSet(TERMINATED)) {
-            s.onComplete();
-        }
+
+        s.onComplete();
     }
 
     @Override
     public boolean hasSubscribers() {
-        return subscribers.get().length != 0;
+        BusSubscription<T> s = subscriber.get();
+        return (s != TERMINATED && s != EMPTY);
     }
 
     @Override
     public Throwable getThrowable() {
-        if (subscribers.get() == TERMINATED) {
+        if (subscriber.get() == TERMINATED) {
             return error;
         }
         return null;
@@ -214,12 +178,12 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
 
     @Override
     public boolean hasThrowable() {
-        return subscribers.get() == TERMINATED && error != null;
+        return subscriber.get() == TERMINATED && error != null;
     }
 
     @Override
     public boolean hasComplete() {
-        return subscribers.get() == TERMINATED && error == null;
+        return subscriber.get() == TERMINATED && error == null;
     }
 
     /**
@@ -256,20 +220,23 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
             if (r == Long.MIN_VALUE) {
                 return;
             }
-            if (r != 0L) {
-                actual.onNext(t);
-                if (r != Long.MAX_VALUE) {
-                    decrementAndGet();
+            if (actual != null) {
+                if (r != 0L) {
+                    actual.onNext(t);
+                    if (r != Long.MAX_VALUE) {
+                        decrementAndGet();
+                    }
+                } else {
+                    cancel();
+                    actual.onError(new MissingBackpressureException("Could not emit value due to lack of requests"));
                 }
-            } else {
-                cancel();
-                actual.onError(new MissingBackpressureException("Could not emit value due to lack of requests"));
             }
         }
 
         public void onError(Throwable t) {
             if (get() != Long.MIN_VALUE) {
-                actual.onError(t);
+                if (actual != null)
+                    actual.onError(t);
             } else {
                 RxJavaPlugins.onError(t);
             }
@@ -277,7 +244,8 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
 
         public void onComplete() {
             if (get() != Long.MIN_VALUE) {
-                actual.onComplete();
+                if (actual != null)
+                    actual.onComplete();
             }
         }
 
@@ -291,7 +259,8 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
         @Override
         public void cancel() {
             if (getAndSet(Long.MIN_VALUE) != Long.MIN_VALUE) {
-                parent.remove(this);
+                if (parent != null)
+                    parent.remove(this);
             }
         }
 

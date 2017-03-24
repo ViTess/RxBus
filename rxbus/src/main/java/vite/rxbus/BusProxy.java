@@ -1,5 +1,6 @@
 package vite.rxbus;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.HashMap;
@@ -76,8 +77,7 @@ public class BusProxy<T> {
     protected void unregister(T entity) {
         Entitys.remove(entity);
         if (Entitys.size() == 0) {
-            Iterator iter = SubjectMap.entrySet().iterator();
-            while (iter.hasNext()) {
+            for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
                 Map.Entry<String, Set<SubjectFucker>> entry = (Map.Entry<String, Set<SubjectFucker>>) iter.next();
                 Set<SubjectFucker> fuckers = entry.getValue();
                 for (SubjectFucker fucker : fuckers)
@@ -87,8 +87,7 @@ public class BusProxy<T> {
     }
 
     protected void mount(Map<String, Set<BusProxy.SubjectFucker>> map) {
-        Iterator iter = SubjectMap.entrySet().iterator();
-        while (iter.hasNext()) {
+        for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
             Map.Entry<String, Set<SubjectFucker>> entry = (Map.Entry<String, Set<SubjectFucker>>) iter.next();
             String tag = entry.getKey();
             Set<SubjectFucker> fuckers = entry.getValue();
