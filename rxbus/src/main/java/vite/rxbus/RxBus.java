@@ -58,6 +58,7 @@ public final class RxBus {
             Constructor<? extends BusProxy> constructor = getConstructor4Class(entityClass);
             try {
                 proxy = constructor.newInstance();
+                PROXY_CACHE.put(entityClass, proxy);
             } catch (InstantiationException e) {
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
