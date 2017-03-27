@@ -55,8 +55,6 @@ public class RxBusProProcessor extends AbstractProcessor {
                     continue;
                 if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                     continue;
-//                Printer.SamplePrint2(e);
-                Printer.SamplePrint3(e);
                 addProxy(e);
             } catch (Exception ee) {
                 ee.printStackTrace();

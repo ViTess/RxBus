@@ -117,6 +117,10 @@ public class TestFragment extends Fragment {
         mListener = null;
     }
 
+    public void callUnregister(){
+        RxBus.unregister(this);
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
