@@ -1,6 +1,7 @@
 package vite.rxbus;
 
 import android.support.annotation.NonNull;
+import android.util.LruCache;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -14,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class RxBus {
 
-    private static final Map<Class, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = new ConcurrentHashMap<>();
+    private static final LruCache<String, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = CacheUtil.Create();
     private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Set<BusProcessor>> SUBJECTS = new ConcurrentHashMap<>();
 
@@ -75,7 +76,8 @@ public final class RxBus {
     }
 
     private static Constructor<? extends BusProxy> getConstructor4Class(Class c) {
-        Constructor<? extends BusProxy> constructor = CONSTRUCTOR_CACHE.get(c);
+        final String canonicalName = c.getCanonicalName();
+        Constructor<? extends BusProxy> constructor = CONSTRUCTOR_CACHE.get(canonicalName);
         if (constructor == null) {
             String targetName = c.getName();
             try {
@@ -86,7 +88,7 @@ public final class RxBus {
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
             }
-            CONSTRUCTOR_CACHE.put(c, constructor);
+            CONSTRUCTOR_CACHE.put(canonicalName, constructor);
         }
         return constructor;
     }

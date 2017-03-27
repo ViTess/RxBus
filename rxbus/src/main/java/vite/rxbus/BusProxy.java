@@ -44,13 +44,8 @@ public class BusProxy<T> {
             }
         }, Functions.EMPTY_ACTION, FlowableInternalHelper.RequestMax.INSTANCE);
 
-        p.filter(new Predicate<V>() {
-            @Override
-            public boolean test(V v) throws Exception {
-                return v != null;
-            }
-        })
-                .subscribeOn(scheduler)
+        //no need filter,because RxJava2 unsupport null
+        p.subscribeOn(scheduler)
                 .subscribeWith(busSubscriber);
         Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
         if (bPros == null) {
