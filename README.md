@@ -1,3 +1,3 @@
 # Android RxBus
 
-dev branch is try to change RetentionPolicy.CLASS
+Base on [RxJava2](https://github.com/ReactiveX/RxJava) & [RxAndroid2](https://github.com/ReactiveX/RxAndroid)
