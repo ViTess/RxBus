@@ -11,8 +11,8 @@
 
 ```groovy
 dependencies {
-  compile 'com.github.vitess:rxbus:2.0.0'
-  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.0'
+  compile 'com.github.vitess:rxbus:2.0.1'
+  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.1'
 }
 ```
 
