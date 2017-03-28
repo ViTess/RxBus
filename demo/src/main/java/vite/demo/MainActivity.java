@@ -99,13 +99,13 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
                 f2.callUnregister();
                 break;
             case R.id.main_bt_tag1:
-//                RxBus.post("test1", "Main Button Tag1");
+                RxBus.post("test1", "Main Button Tag1");
                 break;
             case R.id.main_bt_tag2:
-//                RxBus.post("test2", "Main Button Tag2");
+                RxBus.post("test2", "Main Button Tag2");
                 break;
             case R.id.main_bt_tag3:
-//                RxBus.post("test3", new Entity("Hello", "Wrold"));
+                RxBus.post("test3", new Entity("Hello", "Wrold"));
                 break;
         }
     }

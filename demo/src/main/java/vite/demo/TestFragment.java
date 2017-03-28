@@ -117,7 +117,7 @@ public class TestFragment extends Fragment {
         mListener = null;
     }
 
-    public void callUnregister(){
+    public void callUnregister() {
         RxBus.unregister(this);
     }
 
@@ -145,17 +145,20 @@ public class TestFragment extends Fragment {
     @Subscribe("test2")
     @RxThread(ThreadType.Single)
     public void testTag2(String tag) {
+        Log.i("TestFragment", "testTag2 thread:" + Thread.currentThread().getName());
         Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
     @Subscribe("test3")
     @RxThread(ThreadType.Single)
     public void testTag3(String tag) {
+        Log.i("TestFragment", "testTag3 thread:" + Thread.currentThread().getName());
         Log.e("TestFragment", "testTag3 " + tag);
     }
 
     @Subscribe("test3")
     public void testEntity(Entity entity) {
+        Log.i("TestFragment", "testEntity thread:" + Thread.currentThread().getName());
         Toast.makeText(context, entity.toString(), Toast.LENGTH_SHORT).show();
     }
 
