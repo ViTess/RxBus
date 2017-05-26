@@ -29,14 +29,14 @@ final class ProxyBuilder {
     private static final String CLASS_UNIFORM_MARK = "$$Proxy";
 
     private static final ClassName BUSPROXY = ClassName.get("vite.rxbus", "BusProxy");
-    private static final ClassName FILTER_FUNC = ClassName.get("rx.functions", "Func1");
-    private static final ClassName PROXY_ACTION = ClassName.get("", "ProxyAction");
-    private static final ClassName SCHEDULER_MAIN = ClassName.get("rx.android.schedulers", "AndroidSchedulers", "mainThread");
-    private static final ClassName SCHEDULER_IO = ClassName.get("rx.schedulers", "Schedulers", "io");
-    private static final ClassName SCHEDULER_COMPUTATION = ClassName.get("rx.schedulers", "Schedulers", "computation");
-    private static final ClassName SCHEDULER_NEWTHREAD = ClassName.get("rx.schedulers", "Schedulers", "newThread");
-    private static final ClassName SCHEDULER_IMMEDIATE = ClassName.get("rx.schedulers", "Schedulers", "immediate");
-    private static final ClassName SCHEDULER_TRAMPOLINE = ClassName.get("rx.schedulers", "Schedulers", "trampoline");
+    private static final ClassName FILTER_FUNC = ClassName.get("io.reactivex.functions", "Predicate");
+    private static final ClassName PROXY_ACTION = ClassName.get("vite.rxbus", "IAction");
+    private static final ClassName SCHEDULER_MAIN = ClassName.get("io.reactivex.android.schedulers", "AndroidSchedulers", "mainThread");
+    private static final ClassName SCHEDULER_IO = ClassName.get("io.reactivex.schedulers", "Schedulers", "io");
+    private static final ClassName SCHEDULER_COMPUTATION = ClassName.get("io.reactivex.schedulers", "Schedulers", "computation");
+    private static final ClassName SCHEDULER_NEWTHREAD = ClassName.get("io.reactivex.schedulers", "Schedulers", "newThread");
+    private static final ClassName SCHEDULER_SINGLE = ClassName.get("io.reactivex.schedulers", "Schedulers", "single");
+    private static final ClassName SCHEDULER_TRAMPOLINE = ClassName.get("io.reactivex.schedulers", "Schedulers", "trampoline");
 
     private String mPackagePath;
     private ClassName mTargetClassName;
@@ -191,7 +191,7 @@ final class ProxyBuilder {
     }
 
     private ClassName getRxThread(ThreadType threadType) {
-        ClassName className = SCHEDULER_IMMEDIATE;
+        ClassName className = SCHEDULER_MAIN;
         switch (threadType) {
             case MainThread:
                 className = SCHEDULER_MAIN;
@@ -202,8 +202,8 @@ final class ProxyBuilder {
             case Computation:
                 className = SCHEDULER_COMPUTATION;
                 break;
-            case Immediate:
-                className = SCHEDULER_IMMEDIATE;
+            case Single:
+                className = SCHEDULER_SINGLE;
                 break;
             case NewThread:
                 className = SCHEDULER_NEWTHREAD;

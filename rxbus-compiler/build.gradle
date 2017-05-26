@@ -10,3 +10,5 @@ dependencies {
 
     compile project(deps.rxbus_annotations)
 }
+
+apply from:rootProject.file('./gradle-mvn-push.gradle')

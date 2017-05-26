@@ -55,8 +55,6 @@ public class RxBusProProcessor extends AbstractProcessor {
                     continue;
                 if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                     continue;
-//                Printer.SamplePrint2(e);
-                Printer.SamplePrint3(e);
                 addProxy(e);
             } catch (Exception ee) {
                 ee.printStackTrace();
@@ -99,7 +97,7 @@ public class RxBusProProcessor extends AbstractProcessor {
             PROXYS.put(clazz, proxyBuilder);
         }
 
-        ThreadType threadType = ThreadType.Immediate;
+        ThreadType threadType = ThreadType.MainThread;
 //        List<? extends AnnotationMirror> annoList = e.getAnnotationMirrors();
 //        for (AnnotationMirror mirror : annoList) {
 //            Element annoElement = mirror.getAnnotationType().asElement();

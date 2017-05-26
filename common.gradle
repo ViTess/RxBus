@@ -1,8 +1,8 @@
 ext {
     minSdkVersion = 15
-    targetSdkVersion = 24
-    compileSdkVersion = 24
-    buildToolsVersion = "24.0.3"
+    targetSdkVersion = 25
+    compileSdkVersion = 25
+    buildToolsVersion = "25.0.0"
     sourceCompatibilityVersion = JavaVersion.VERSION_1_7
     targetCompatibilityVersion = JavaVersion.VERSION_1_7
 
@@ -13,8 +13,8 @@ ext {
             auto_service     : "com.google.auto.service:auto-service:1.0-rc2",
             javapoet         : "com.squareup:javapoet:1.8.0",
 
-            rxjava           : "io.reactivex:rxandroid:1.2.1",
-            rxandroid        : "io.reactivex:rxjava:1.1.6",
+            rxjava           : "io.reactivex.rxjava2:rxjava:2.0.1",
+            rxandroid        : "io.reactivex.rxjava2:rxandroid:2.0.1",
 
             rxbus            : ':rxbus',
             rxbus_annotations: ':rxbus-annotations',

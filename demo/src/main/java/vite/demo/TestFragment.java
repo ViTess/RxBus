@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import vite.rxbus.RxBus;
 import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
 import vite.rxbus.ThreadType;
@@ -69,6 +70,13 @@ public class TestFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        RxBus.register(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        RxBus.unregister(this);
     }
 
     @Override
@@ -109,6 +117,10 @@ public class TestFragment extends Fragment {
         mListener = null;
     }
 
+    public void callUnregister() {
+        RxBus.unregister(this);
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -131,19 +143,22 @@ public class TestFragment extends Fragment {
     }
 
     @Subscribe("test2")
-    @RxThread(ThreadType.Immediate)
+    @RxThread(ThreadType.Single)
     public void testTag2(String tag) {
+        Log.i("TestFragment", "testTag2 thread:" + Thread.currentThread().getName());
         Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
     @Subscribe("test3")
-    @RxThread(ThreadType.Immediate)
+    @RxThread(ThreadType.Single)
     public void testTag3(String tag) {
+        Log.i("TestFragment", "testTag3 thread:" + Thread.currentThread().getName());
         Log.e("TestFragment", "testTag3 " + tag);
     }
 
     @Subscribe("test3")
     public void testEntity(Entity entity) {
+        Log.i("TestFragment", "testEntity thread:" + Thread.currentThread().getName());
         Toast.makeText(context, entity.toString(), Toast.LENGTH_SHORT).show();
     }
 

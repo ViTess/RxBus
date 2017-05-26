@@ -1,5 +1,8 @@
 package vite.rxbus;
 
+import android.support.annotation.NonNull;
+import android.util.LruCache;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -12,9 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class RxBus {
 
-    private static final Map<Class, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = new HashMap<>();
-    private static final Map<Class, BusProxy> PROXY_CACHE = new HashMap<>();
-    private static final Map<String, Set<BusProxy.SubjectFucker>> SUBJECTS = new ConcurrentHashMap<>();
+    private static final LruCache<String, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = CacheUtil.Create();
+    private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Set<BusProcessor>> SUBJECTS = new ConcurrentHashMap<>();
 
     public static void register(Object entity) {
         BusProxy proxy = createProxy(entity);
@@ -29,18 +32,22 @@ public final class RxBus {
             proxy.unregister(entity);
     }
 
-    public static void post(Object value) {
+    public static void post(@NonNull Object value) {
         post(Subscribe.DEFAULT, value);
     }
 
-    public static void post(String tag, Object value) {
-        Set<BusProxy.SubjectFucker> subjects = SUBJECTS.get(tag);
+    /**
+     * @param tag
+     * @param value in RxJava2.0 , Null is unsupport
+     */
+    public static void post(String tag, @NonNull Object value) {
+        Set<BusProcessor> subjects = SUBJECTS.get(tag);
         if (subjects != null) {
-            for (BusProxy.SubjectFucker s : subjects) {
-                if (!s.subscription.isUnsubscribed())
-                    s.subject.onNext(value);
+            for (BusProcessor p : subjects) {
+                if (!p.isDispose())
+                    p.onNext(value);
                 else
-                    subjects.remove(s);
+                    subjects.remove(p);
             }
         }
     }
@@ -52,6 +59,7 @@ public final class RxBus {
             Constructor<? extends BusProxy> constructor = getConstructor4Class(entityClass);
             try {
                 proxy = constructor.newInstance();
+                PROXY_CACHE.put(entityClass, proxy);
             } catch (InstantiationException e) {
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
@@ -68,7 +76,8 @@ public final class RxBus {
     }
 
     private static Constructor<? extends BusProxy> getConstructor4Class(Class c) {
-        Constructor<? extends BusProxy> constructor = CONSTRUCTOR_CACHE.get(c);
+        final String canonicalName = c.getCanonicalName();
+        Constructor<? extends BusProxy> constructor = CONSTRUCTOR_CACHE.get(canonicalName);
         if (constructor == null) {
             String targetName = c.getName();
             try {
@@ -79,7 +88,7 @@ public final class RxBus {
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
             }
-            CONSTRUCTOR_CACHE.put(c, constructor);
+            CONSTRUCTOR_CACHE.put(canonicalName, constructor);
         }
         return constructor;
     }
