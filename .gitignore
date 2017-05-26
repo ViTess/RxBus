@@ -10,5 +10,6 @@
 *.txt
 /rxbus-compiler/build
 /rxbus/build
+/rxbus-compiler/src/main/java/vite/rxbus/compiler/TestPrinter.java
 /exampleTest/
 /demo/src/main/java/vite/demo/MainActivity$$Binder.java
