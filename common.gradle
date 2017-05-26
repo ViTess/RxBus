@@ -13,7 +13,7 @@ ext {
             auto_service     : "com.google.auto.service:auto-service:1.0-rc2",
             javapoet         : "com.squareup:javapoet:1.8.0",
 
-            rxjava           : "io.reactivex.rxjava2:rxjava:2.0.1",
+            rxjava           : "io.reactivex.rxjava2:rxjava:2.1.0",
             rxandroid        : "io.reactivex.rxjava2:rxandroid:2.0.1",
 
             rxbus            : ':rxbus',
@@ -23,8 +23,4 @@ ext {
             lint_api         : "com.android.tools.lint:lint-api:24.3.1",
             lint_checks      : "com.android.tools.lint:lint-checks:24.3.1"
     ]
-}
-
-subprojects {
-
 }

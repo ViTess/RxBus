@@ -29,6 +29,7 @@ final class ProxyBuilder {
     private static final String CLASS_UNIFORM_MARK = "$$Proxy";
 
     private static final ClassName BUSPROXY = ClassName.get("vite.rxbus", "BusProxy");
+    private static final ClassName DEFAULT_OBJECT = ClassName.get("vite.rxbus", "DefaultObject");
     private static final ClassName FILTER_FUNC = ClassName.get("io.reactivex.functions", "Predicate");
     private static final ClassName PROXY_ACTION = ClassName.get("vite.rxbus", "IAction");
     private static final ClassName SCHEDULER_MAIN = ClassName.get("io.reactivex.android.schedulers", "AndroidSchedulers", "mainThread");
@@ -58,13 +59,11 @@ final class ProxyBuilder {
         mMethods.add(methodBinder);
     }
 
-    public void build(Filer filer) {
-        JavaFile javaFile = JavaFile.builder(mPackagePath, createTargetClass()).build();
-        try {
-            javaFile.writeTo(filer);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void build(Filer filer) throws IOException {
+        JavaFile javaFile = JavaFile.builder(mPackagePath, createTargetClass())
+                .addFileComment("Generated code from RxBus. Do not modify!")
+                .build();
+        javaFile.writeTo(filer);
     }
 
     void build(File file) {
@@ -93,9 +92,8 @@ final class ProxyBuilder {
     private MethodSpec createConstructor() {
         MethodSpec.Builder builder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC);
-        for (MethodBinder binder : mMethods) {
+        for (MethodBinder binder : mMethods)
             builder.addCode(createMethodCode(binder));
-        }
         return builder.build();
     }
 
@@ -105,8 +103,21 @@ final class ProxyBuilder {
         for (String tag : tags) {
             ClassName thread = getRxThread(binder.getThreadType());
 
+            TypeMirror paramType = binder.getParamType();
+            TypeName typeName;
+            if (paramType == null) {
+                typeName = DEFAULT_OBJECT;
+            } else {
+                if (paramType.getKind().isPrimitive()) {
+                    typeName = TypeName.get(paramType);
+                    if (!typeName.isBoxedPrimitive())
+                        typeName = typeName.box();
+                } else
+                    typeName = ClassName.get(paramType);
+            }
+
             CodeBlock.Builder b = CodeBlock.builder();
-            b.addStatement("createMethod($S\n,$T()\n,$L)", tag, thread, createProxyAction(binder));
+            b.addStatement("createMethod($S\n,$T()\n,$T.class,$L)", tag, thread, typeName, createProxyAction(binder));
             builder.add(b.build());
         }
         return builder.build();
@@ -154,10 +165,10 @@ final class ProxyBuilder {
 //        } else
 //            methodBuilder.addStatement("target." + binder.getMethodName() + "()");
 
-        TypeMirror paramType = binder.getParamTypes();
+        TypeMirror paramType = binder.getParamType();
         TypeName typeName;
         if (paramType == null) {
-            typeName = ClassName.get("java.lang", "Object");
+            typeName = DEFAULT_OBJECT;
             methodBuilder.addStatement("target." + binder.getMethodName() + "()");
         } else {
             if (paramType.getKind().isPrimitive()) {
@@ -184,10 +195,6 @@ final class ProxyBuilder {
                 ", mTargetClassName=" + mTargetClassName +
                 ", mMethods=" + mMethods +
                 '}';
-    }
-
-    String getClassName() {
-        return mTargetClassName.toString();
     }
 
     private ClassName getRxThread(ThreadType threadType) {

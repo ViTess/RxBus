@@ -6,19 +6,15 @@ import android.util.Log;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import io.reactivex.Scheduler;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Predicate;
 import io.reactivex.internal.functions.Functions;
 import io.reactivex.internal.operators.flowable.FlowableInternalHelper;
-import io.reactivex.processors.PublishProcessor;
 
 /**
  * Created by trs on 17-1-4.
@@ -27,7 +23,7 @@ public class BusProxy<T> {
     protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
     protected final HashMap<String, Set<BusProcessor<T>>> SubjectMap = new HashMap<>();
 
-    protected <V> void createMethod(String tag, Scheduler scheduler, final IAction<T, V> proxyAction) {
+    protected <V> void createMethod(String tag, Scheduler scheduler, final Class<V> clazz, final IAction<T, V> proxyAction) {
         BusProcessor p = BusProcessor.create();
         BusSubscriber<V> busSubscriber = new BusSubscriber<>(new Consumer<V>() {
             @Override
@@ -45,8 +41,13 @@ public class BusProxy<T> {
         }, Functions.EMPTY_ACTION, FlowableInternalHelper.RequestMax.INSTANCE);
 
         //no need filter,because RxJava2 unsupport null
-        p.observeOn(scheduler)
-                .subscribeWith(busSubscriber);
+        p.filter(new Predicate() {
+            @Override
+            public boolean test(Object o) throws Exception {
+                return clazz.isInstance(o);
+            }
+        }).observeOn(scheduler).subscribeWith(busSubscriber);
+
         Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
         if (bPros == null) {
             bPros = new HashSet<>();

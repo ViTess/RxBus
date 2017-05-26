@@ -5,7 +5,6 @@ import android.util.LruCache;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +17,8 @@ public final class RxBus {
     private static final LruCache<String, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = CacheUtil.Create();
     private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Set<BusProcessor>> SUBJECTS = new ConcurrentHashMap<>();
+
+    protected static final DefaultObject DEFAULT_OBJECT = new DefaultObject();
 
     public static void register(Object entity) {
         BusProxy proxy = createProxy(entity);
@@ -32,24 +33,35 @@ public final class RxBus {
             proxy.unregister(entity);
     }
 
+    /**
+     * post to default tag('NULL' tag)
+     *
+     * @param value not tag
+     */
     public static void post(@NonNull Object value) {
         post(Subscribe.DEFAULT, value);
     }
 
+//    public static void post(@NonNull String tag) {
+//        post(tag, DEFAULT_OBJECT);
+//    }
+//
+//    public static void post() {
+//        post(Subscribe.DEFAULT, DEFAULT_OBJECT);
+//    }
+
     /**
      * @param tag
-     * @param value in RxJava2.0 , Null is unsupport
+     * @param value
      */
-    public static void post(String tag, @NonNull Object value) {
+    public static void post(@NonNull String tag, Object value) {
         Set<BusProcessor> subjects = SUBJECTS.get(tag);
-        if (subjects != null) {
-            for (BusProcessor p : subjects) {
-                if (!p.isDispose())
-                    p.onNext(value);
-                else
+        if (subjects != null)
+            for (BusProcessor p : subjects)
+                if (!p.isDispose()) {
+                    p.onNext(value == null ? DEFAULT_OBJECT : value);
+                } else
                     subjects.remove(p);
-            }
-        }
     }
 
     private static BusProxy createProxy(Object entity) {

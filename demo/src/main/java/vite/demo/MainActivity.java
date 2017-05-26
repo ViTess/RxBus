@@ -13,6 +13,8 @@ import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -82,21 +84,12 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.main_bt:
-                RxBus.post(TAG, random.nextInt());
+//                RxBus.post(TAG, random.nextInt());
+                RxBus.post(TAG, new int[]{1, 3, 2});
                 break;
             case R.id.main_bt_void:
                 /* RxJava2.0 not allow Null */
-//                RxBus.post(null);
-
-//                HashMap<Map<String, Integer>, Map<Float, Entity>> map = new HashMap<>();
-//                Map<String, Integer> key = new HashMap<>();
-//                Map<Float, Entity> value = new HashMap<>();
-//                key.put("testmap", 47);
-//                value.put(0.25f, new Entity("p1", "p2"));
-//                map.put(key, value);
-//                RxBus.post(TAG, map);
-
-                f2.callUnregister();
+                RxBus.post(TAG, null);
                 break;
             case R.id.main_bt_tag1:
                 RxBus.post("test1", "Main Button Tag1");
@@ -121,32 +114,19 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         Toast.makeText(this, "random:" + random, Toast.LENGTH_SHORT).show();
     }
 
-    @Subscribe
+    @Subscribe(TAG)
     public void test() {
         Toast.makeText(this, "void", Toast.LENGTH_SHORT).show();
     }
 
-    @Subscribe
+    @Subscribe(TAG)
     @RxThread(ThreadType.IO)
     public void testThread() {
-        Log.v("testThread", "thread:" + Thread.currentThread());
-    }
-
-    @Subscribe
-    public void testArray(ArrayList<String> array) {
-
-    }
-
-    @Subscribe
-    public void testArray2(int[] aaa) {
-    }
-
-    @Subscribe
-    public void testMap(HashMap<Integer, String> map) {
+        Log.v("testThread", "thread:" + Thread.currentThread().getName());
     }
 
     @Subscribe(TAG)
-    public void testMoreMap(HashMap<Map<String, Integer>, Map<Float, Entity>> map) {
-        Log.v("MainActivity", "testMoreMap");
+    public void testArray2(int[] aaa) {
+        Log.v("testArray2", Arrays.toString(aaa));
     }
 }

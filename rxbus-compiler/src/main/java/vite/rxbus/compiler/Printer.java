@@ -35,8 +35,22 @@ final class Printer {
         Print(Diagnostic.Kind.ERROR, element, format, args);
     }
 
+    public static void PrintError(String format, Object... args){
+        Print(Diagnostic.Kind.ERROR, format, args);
+    }
+
     public static void PrintNote(Element element, String format, Object... args) {
         Print(Diagnostic.Kind.NOTE, element, format, args);
+    }
+
+    public static void PrintNote(String format, Object... args) {
+        Print(Diagnostic.Kind.NOTE, format, args);
+    }
+
+    private static void Print(Diagnostic.Kind kind, String format, Object... args) {
+        if (args.length > 0)
+            format = String.format(format, args);
+        Util.Messager.printMessage(kind, format);
     }
 
     private static void Print(Diagnostic.Kind kind, Element element, String format, Object... args) {

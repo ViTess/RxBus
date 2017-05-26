@@ -139,6 +139,7 @@ public class TestFragment extends Fragment {
     @RxThread(ThreadType.MainThread)
     @Subscribe({"test1", "test2", "test3"})
     public void testTag1(String tag) {
+        Log.i("TestFragment", "testTag1 thread:" + Thread.currentThread().getName());
         tv.setText("testTag " + tag);
     }
 
@@ -146,7 +147,7 @@ public class TestFragment extends Fragment {
     @RxThread(ThreadType.Single)
     public void testTag2(String tag) {
         Log.i("TestFragment", "testTag2 thread:" + Thread.currentThread().getName());
-        Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
+//        Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
     }
 
     @Subscribe("test3")

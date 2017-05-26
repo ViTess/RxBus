@@ -51,7 +51,7 @@ final class MethodBinder {
         mParamType = typeMirror;
     }
 
-    public TypeMirror getParamTypes() {
+    public TypeMirror getParamType() {
         return mParamType;
     }
 

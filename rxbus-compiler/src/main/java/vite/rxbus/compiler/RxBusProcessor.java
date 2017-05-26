@@ -1,10 +1,11 @@
 package vite.rxbus.compiler;
 
-import com.google.auto.common .SuperficialValidation;
+import com.google.auto.common.SuperficialValidation;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.ClassName;
 
-import java.util.HashMap;
+import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,17 +28,12 @@ import vite.rxbus.ThreadType;
  * Created by trs on 16-11-24.
  */
 @AutoService(Processor.class)
-public class RxBusProProcessor extends AbstractProcessor {
-
-    private static final Map<TypeElement, ProxyBuilder> PROXYS = new HashMap<>();
+public class RxBusProcessor extends AbstractProcessor {
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        Util.TypeUtils = processingEnv.getTypeUtils();
-        Util.ElementUtils = processingEnv.getElementUtils();
-        Util.Filer = processingEnv.getFiler();
-        Util.Messager = processingEnv.getMessager();
+        Util.init(processingEnv);
     }
 
     /**
@@ -47,6 +43,8 @@ public class RxBusProProcessor extends AbstractProcessor {
      */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        final Map<TypeElement, ProxyBuilder> PROXYS = new LinkedHashMap<>();
+
         //获取所有被目标注解标记的元素
         Set<Element> targetElements = (Set<Element>) roundEnv.getElementsAnnotatedWith(Subscribe.class);
         for (Element e : targetElements) {
@@ -55,14 +53,18 @@ public class RxBusProProcessor extends AbstractProcessor {
                     continue;
                 if (!Util.isStandardEncloseingClass(e) || !Util.isStandardMethod(e))
                     continue;
-                addProxy(e);
-            } catch (Exception ee) {
-                ee.printStackTrace();
-                Printer.PrintError(e, ee.getMessage());
+                if (!Util.checkParamters(e)) {
+                    //it will break out build
+                    Printer.PrintError(e, "%s Parameters that implement Map, List, Collectin are not supported!", e);
+                }
+                addProxy(PROXYS, e);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+                Printer.PrintError(e, exception.getMessage());
             }
         }
-        createProxy();
-        return true;
+        createProxy(PROXYS);
+        return false;
     }
 
     /**
@@ -89,7 +91,7 @@ public class RxBusProProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    private void addProxy(Element e) {
+    private void addProxy(Map<TypeElement, ProxyBuilder> PROXYS, Element e) {
         TypeElement clazz = (TypeElement) e.getEnclosingElement();
         ProxyBuilder proxyBuilder = PROXYS.get(clazz);
         if (proxyBuilder == null) {
@@ -122,22 +124,23 @@ public class RxBusProProcessor extends AbstractProcessor {
             methodBinder.addTag(tag);
 
         ExecutableElement executableElement = (ExecutableElement) e;
-        int size = executableElement.getParameters().size();
-        if (size > 1) {
-            Printer.PrintError(executableElement, "%s paramters size can't more than 1!", executableElement.getSimpleName().toString());
-        } else if (size == 1) {
+        if (executableElement.getParameters().size() == 1) {
             VariableElement ve = executableElement.getParameters().get(0);
             methodBinder.setParamType(ve.asType());
-        } else {
-
         }
         proxyBuilder.addMethod(methodBinder);
     }
 
-    private void createProxy() {
-        for (ProxyBuilder pb : PROXYS.values()) {
-            pb.build(Util.Filer);
-//            Printer.testPrint(pb.getClassName(), pb.toString());
+    private void createProxy(Map<TypeElement, ProxyBuilder> PROXYS) {
+        for (Map.Entry<TypeElement, ProxyBuilder> entry : PROXYS.entrySet()) {
+            TypeElement e = entry.getKey();
+            ProxyBuilder pb = entry.getValue();
+            try {
+                pb.build(Util.Filer);
+            } catch (IOException IOE) {
+                IOE.printStackTrace();
+                Printer.PrintError(e, "Unable to create RxBus proxy for type %s", e);
+            }
         }
     }
 }
