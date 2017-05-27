@@ -104,4 +104,6 @@ public final class RxBus {
         }
         return constructor;
     }
+
+    private RxBus(){}
 }
