@@ -11,8 +11,8 @@
 
 ```groovy
 dependencies {
-  compile 'com.github.vitess:rxbus:2.0.1'
-  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.1'
+  compile 'com.github.vitess:rxbus:2.0.2'
+  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.2'
 }
 ```
 
@@ -22,6 +22,8 @@ dependencies {
 ---
 
 在类的初始化处使用`RxBus.register`注册，并在类销毁的地方使用`RxBus.unregister`注销。注册后的类中的方法即可使用`@Subscribe`注释标记，此后在类以外的地方即可通过`RxBus.post`发射数据到指定方法中。
+
+当使用`@Subscribe`标记方法时，若不指定特定的tag，该方法将被默认的tag所标记。这一类被默认tag标记的方法可接收`RxBus.post(Object value)`发射数据，或者使用`RxBus.post(Subscribe.DEFAULT , ${value})`来显式发射。
 
 For example:
 
@@ -39,9 +41,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button).setOnClickListenernew(View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                RxBus.post("receiver1", 123);
-                RxBus.post("This is post to receiver2");
-                RxBus.post(new Object());
+                RxBus.post("receiver1", 123);//post to receiver1
+                RxBus.post("This is post to receiver2");//post to receiver2
+                RxBus.post(new Object());//post to receiver3
+                RxBus.post("receiver4", null);//post to receiver4
+                RxBus.post(null);//post to receiver5
             }
         });
     }
@@ -68,8 +72,24 @@ public class MainActivity extends AppCompatActivity {
     public void receiver3(Object obj) {
     	Log.i("RxBus", "receiver3:" + Thread.currentThread().getName());
     }
+    
+    @Subscribe("receiver4")
+    public void receiver4(){
+       Log.i("RxBus", "receiver4:" + Thread.currentThread().getName());
+    }
+    
+    @Subscribe
+    public void receiver5(){
+       Log.i("RxBus", "receiver5:" + Thread.currentThread().getName());
+    }
 }
 ```
+
+限制
+---
+
+1. 目前支持发送null值（虽然post方法标记了@NonNull）
+2. 不支持发送实现了Map、Collection接口的参数类型（如ArrayList、HashMap等），如果必须发送这种集合容器参数，请自实现实体类，集合容器作为成员变量，然后发送实体类参数
 
 TODO
 ---
