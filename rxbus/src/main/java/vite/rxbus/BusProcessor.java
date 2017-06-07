@@ -6,18 +6,18 @@ import org.reactivestreams.Subscription;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.reactivex.annotations.NonNull;
 import io.reactivex.exceptions.MissingBackpressureException;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
 import io.reactivex.plugins.RxJavaPlugins;
-import io.reactivex.processors.FlowableProcessor;
 
 /**
  * rewrite PublishProcessor
  * <p>
  * Created by trs on 17-3-20.
  */
-final class BusProcessor<T> extends FlowableProcessor<T> {
+final class BusProcessor<T> extends BusFlowableProcessor<T> {
     static final BusSubscription TERMINATED = new BusSubscription(null, null);
     /**
      * An empty subscribers array to avoid allocating it all the time.
@@ -177,15 +177,6 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
     }
 
     @Override
-    public boolean hasThrowable() {
-        return subscriber.get() == TERMINATED && error != null;
-    }
-
-    @Override
-    public boolean hasComplete() {
-        return subscriber.get() == TERMINATED && error == null;
-    }
-
     public void dispose() {
         BusSubscription<T> s = subscriber.get();
         if (s == TERMINATED || s == EMPTY)
@@ -195,12 +186,23 @@ final class BusProcessor<T> extends FlowableProcessor<T> {
         s.cancel();
     }
 
+    @Override
     public boolean isDispose() {
         BusSubscription<T> s = subscriber.get();
         if (s == TERMINATED || s == EMPTY)
             return true;
 
         return s.isCancelled();
+    }
+
+    @Override
+    public boolean hasThrowable() {
+        return subscriber.get() == TERMINATED && error != null;
+    }
+
+    @Override
+    public boolean hasComplete() {
+        return subscriber.get() == TERMINATED && error == null;
     }
 
     /**

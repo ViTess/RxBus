@@ -1,6 +1,6 @@
 package vite.rxbus;
 
-import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.LruCache;
 
 import java.lang.reflect.Constructor;
@@ -16,14 +16,23 @@ public final class RxBus {
 
     private static final LruCache<String, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = CacheUtil.Create();
     private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
-    private static final Map<String, Set<BusProcessor>> SUBJECTS = new ConcurrentHashMap<>();
+    private static final Map<String, Set<BusFlowableProcessor>> PROCESSORS = new ConcurrentHashMap<>();
+    /**
+     * Integer -> hashCode
+     */
+    private static final Map<Integer, StickyHolder<String, Object>> STICKY_CACHE = new ConcurrentHashMap<>();
 
     protected static final DefaultObject DEFAULT_OBJECT = new DefaultObject();
 
     public static void register(Object entity) {
         BusProxy proxy = createProxy(entity);
         proxy.register(entity);
-        proxy.mount(SUBJECTS);
+        proxy.mount(PROCESSORS);
+
+        //TODO:maybe use thread to do this?
+        if (STICKY_CACHE.size() > 0)
+            for (StickyHolder<String, Object> sticky : STICKY_CACHE.values())
+                proxy.post(sticky.tag, sticky.value);
     }
 
     public static void unregister(Object entity) {
@@ -38,30 +47,58 @@ public final class RxBus {
      *
      * @param value not tag
      */
-    public static void post(@NonNull Object value) {
-        post(Subscribe.DEFAULT, value);
+    public static void post(Object value) {
+        post(null, value);
     }
-
-//    public static void post(@NonNull String tag) {
-//        post(tag, DEFAULT_OBJECT);
-//    }
-//
-//    public static void post() {
-//        post(Subscribe.DEFAULT, DEFAULT_OBJECT);
-//    }
 
     /**
      * @param tag
      * @param value
      */
-    public static void post(@NonNull String tag, Object value) {
-        Set<BusProcessor> subjects = SUBJECTS.get(tag);
+    public static void post(String tag, Object value) {
+        if (TextUtils.isEmpty(tag))
+            tag = Subscribe.DEFAULT;
+        Set<BusFlowableProcessor> subjects = PROCESSORS.get(tag);
         if (subjects != null)
-            for (BusProcessor p : subjects)
-                if (!p.isDispose()) {
+            for (BusFlowableProcessor p : subjects)
+                if (!p.isDispose())
                     p.onNext(value == null ? DEFAULT_OBJECT : value);
-                } else
+                else
                     subjects.remove(p);
+    }
+
+    /**
+     * @param value
+     * @return sticky's key
+     */
+    public static int postSticky(Object value) {
+        return postSticky(null, value);
+    }
+
+    /**
+     * @param tag
+     * @param value
+     * @return tag and parameter of the key
+     */
+    public static int postSticky(String tag, Object value) {
+        post(tag, value);
+        final StickyHolder<String, Object> sticky = new StickyHolder<>(TextUtils.isEmpty(tag) ? Subscribe.DEFAULT : tag,
+                value == null ? DEFAULT_OBJECT : value);
+        final int hashCode = sticky.hashCode();
+        STICKY_CACHE.put(hashCode, sticky);
+        return hashCode;
+    }
+
+    /**
+     * @param key tag and parameter of the key，you can get it form postSticky
+     */
+    public static void removeSticky(int key) {
+        if (STICKY_CACHE.size() > 0)
+            STICKY_CACHE.remove(key);
+    }
+
+    public static void removeAllSticky() {
+        STICKY_CACHE.clear();
     }
 
     private static BusProxy createProxy(Object entity) {
@@ -105,5 +142,10 @@ public final class RxBus {
         return constructor;
     }
 
-    private RxBus(){}
+    private RxBus() {
+    }
+
+    public static String toStrings() {
+        return "RxBus[Proxy = " + PROXY_CACHE + " , Processor = " + PROCESSORS + " , Sticky = " + STICKY_CACHE + "]";
+    }
 }

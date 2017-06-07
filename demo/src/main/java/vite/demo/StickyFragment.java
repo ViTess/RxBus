@@ -3,29 +3,26 @@ package vite.demo;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import vite.rxbus.RxBus;
-import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
-import vite.rxbus.ThreadType;
 
 
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
- * {@link TestFragment.OnFragmentInteractionListener} interface
+ * {@link StickyFragment.OnFragmentInteractionListener} interface
  * to handle interaction events.
- * Use the {@link TestFragment#newInstance} factory method to
+ * Use the {@link StickyFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class TestFragment extends Fragment {
+public class StickyFragment extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -37,11 +34,9 @@ public class TestFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
 
-    private Context context;
-    private View rootView;
-    private TextView tv, tv_title;
+    private TextView tv;
 
-    public TestFragment() {
+    public StickyFragment() {
         // Required empty public constructor
     }
 
@@ -51,11 +46,11 @@ public class TestFragment extends Fragment {
      *
      * @param param1 Parameter 1.
      * @param param2 Parameter 2.
-     * @return A new instance of fragment TestFragment.
+     * @return A new instance of fragment StickyFragment.
      */
     // TODO: Rename and change types and number of parameters
-    public static TestFragment newInstance(String param1, String param2) {
-        TestFragment fragment = new TestFragment();
+    public static StickyFragment newInstance(String param1, String param2) {
+        StickyFragment fragment = new StickyFragment();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
@@ -74,23 +69,16 @@ public class TestFragment extends Fragment {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-        RxBus.unregister(this);
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        rootView = inflater.inflate(R.layout.fragment_test, container, false);
-        tv_title = (TextView) rootView.findViewById(R.id.test_tv_title);
-        tv = (TextView) rootView.findViewById(R.id.test_tv);
-        context = getContext();
+        return inflater.inflate(R.layout.fragment_sticky, container, false);
+    }
 
-        tv_title.setText(mParam1);
-
-        return rootView;
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        tv = (TextView) view.findViewById(R.id.sticky_tv);
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -117,52 +105,6 @@ public class TestFragment extends Fragment {
         mListener = null;
     }
 
-    public void callUnregister() {
-        RxBus.unregister(this);
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-    }
-
-    @Subscribe(MainActivity.TAG)
-    public void test(int random) {
-        tv.setText("receive : " + random);
-    }
-
-    @Subscribe
-    public void test() {
-        tv.setText("void");
-    }
-
-    @RxThread(ThreadType.MainThread)
-    @Subscribe({"test1", "test2", "test3"})
-    public void testTag1(String tag) {
-        Log.i("TestFragment - " + mParam1, "testTag1 thread:" + Thread.currentThread().getName());
-        tv.setText("testTag " + tag);
-    }
-
-    @Subscribe("test2")
-    @RxThread(ThreadType.Single)
-    public void testTag2(String tag) {
-        Log.i("TestFragment - " + mParam1, "testTag2 thread:" + Thread.currentThread().getName());
-//        Toast.makeText(context, "testTag2 " + tag, Toast.LENGTH_SHORT).show();
-    }
-
-    @Subscribe("test3")
-    @RxThread(ThreadType.Single)
-    public void testTag3(String tag) {
-        Log.i("TestFragment - " + mParam1, "testTag3 thread:" + Thread.currentThread().getName());
-        Log.e("TestFragment - " + mParam1, "testTag3 " + tag);
-    }
-
-    @Subscribe("test3")
-    public void testEntity(Entity entity) {
-        Log.i("TestFragment - " + mParam1, "testEntity thread:" + Thread.currentThread().getName());
-        Toast.makeText(context, entity.toString(), Toast.LENGTH_SHORT).show();
-    }
-
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
@@ -176,5 +118,10 @@ public class TestFragment extends Fragment {
     public interface OnFragmentInteractionListener {
         // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
+    }
+
+    @Subscribe("FUCK")
+    public void testSticky(int a) {
+        tv.setText("reciver a <Fuck> tag's sticky message:" + a);
     }
 }

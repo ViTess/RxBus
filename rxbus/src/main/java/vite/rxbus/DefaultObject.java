@@ -5,7 +5,7 @@ package vite.rxbus;
  * Created by trs on 17-5-25.
  */
 
-public class DefaultObject {
+public final class DefaultObject {
 
     private final int mSeed = 17;
     private final Object mObject;
