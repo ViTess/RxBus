@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -79,6 +80,12 @@ public class StickyFragment extends Fragment {
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         tv = (TextView) view.findViewById(R.id.sticky_tv);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        RxBus.unregister(this);
     }
 
     // TODO: Rename method, update argument and hook method into UI event

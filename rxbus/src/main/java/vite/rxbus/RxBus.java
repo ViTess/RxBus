@@ -3,6 +3,7 @@ package vite.rxbus;
 import android.text.TextUtils;
 import android.util.LruCache;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class RxBus {
 
     private static final LruCache<String, Constructor<? extends BusProxy>> CONSTRUCTOR_CACHE = CacheUtil.Create();
-    private static final Map<Class, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Object, BusProxy> PROXY_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Set<BusFlowableProcessor>> PROCESSORS = new ConcurrentHashMap<>();
     /**
      * Integer -> hashCode
@@ -25,9 +26,17 @@ public final class RxBus {
     protected static final DefaultObject DEFAULT_OBJECT = new DefaultObject();
 
     public static void register(Object entity) {
-        BusProxy proxy = createProxy(entity);
-        proxy.register(entity);
-        proxy.mount(PROCESSORS);
+        BusProxy proxy = null;
+
+        if (PROXY_CACHE.size() > 0)
+            proxy = PROXY_CACHE.get(entity);
+
+        if (proxy == null) {
+            proxy = createProxy(entity);
+            proxy.register(entity);
+            proxy.mount(PROCESSORS);
+            PROXY_CACHE.put(entity, proxy);
+        }
 
         //TODO:maybe use thread to do this?
         if (STICKY_CACHE.size() > 0)
@@ -35,11 +44,18 @@ public final class RxBus {
                 proxy.post(sticky.tag, sticky.value);
     }
 
+    /**
+     * @param entity
+     */
     public static void unregister(Object entity) {
-        Class entityClass = entity.getClass();
-        BusProxy proxy = getProxy4Class(entityClass);
+        BusProxy proxy = null;
+        if (PROXY_CACHE.size() > 0) {
+            proxy = PROXY_CACHE.get(entity);
+            PROXY_CACHE.remove(entity);
+        }
+
         if (proxy != null)
-            proxy.unregister(entity);
+            proxy.unregister(PROCESSORS);
     }
 
     /**
@@ -97,31 +113,32 @@ public final class RxBus {
             STICKY_CACHE.remove(key);
     }
 
+    /**
+     * you'd better call it at the end of the process
+     */
     public static void removeAllSticky() {
         STICKY_CACHE.clear();
     }
 
     private static BusProxy createProxy(Object entity) {
         Class entityClass = entity.getClass();
-        BusProxy proxy = getProxy4Class(entityClass);
-        if (proxy == null) {
-            Constructor<? extends BusProxy> constructor = getConstructor4Class(entityClass);
-            try {
-                proxy = constructor.newInstance();
-                PROXY_CACHE.put(entityClass, proxy);
-            } catch (InstantiationException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            }
+        Constructor<? extends BusProxy> constructor = getConstructor4Class(entityClass);
+        try {
+            return constructor.newInstance();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Unable to invoke " + constructor, e);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Unable to invoke " + constructor, e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException)
+                throw (RuntimeException) cause;
+            if (cause instanceof Error)
+                throw (Error) cause;
+            throw new RuntimeException("Unable to create proxy instance.", cause);
         }
-        return proxy;
-    }
-
-    private static BusProxy getProxy4Class(Class c) {
-        return PROXY_CACHE.get(c);
     }
 
     private static Constructor<? extends BusProxy> getConstructor4Class(Class c) {

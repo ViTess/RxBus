@@ -2,6 +2,7 @@ package vite.rxbus;
 
 import android.util.Log;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -24,8 +25,10 @@ public class BusProxy<T> {
         void toDo(T t, V v);
     }
 
-    protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
+    //    protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
     protected final HashMap<String, Set<BusFlowableProcessor<T>>> ProcessorMap = new HashMap<>();
+
+    private WeakReference<T> entity;
 
     protected <V> void createMethod(String tag, Scheduler scheduler, final Class<V> clazz, final IAction<T, V> proxyAction) {
         BusFlowableProcessor p = BusProcessor.create().toSerialized();
@@ -33,9 +36,8 @@ public class BusProxy<T> {
             @Override
             public void accept(V v) throws Exception {
                 //TODO:thread-safe Entitys
-                for (T t : Entitys) {
-                    proxyAction.toDo(t, v);
-                }
+                if (entity != null && entity.get() != null)
+                    proxyAction.toDo(entity.get(), v);
             }
         }, new Consumer<Throwable>() {
             @Override
@@ -68,19 +70,27 @@ public class BusProxy<T> {
     }
 
     protected void register(T entity) {
-        Entitys.add(entity);
+//        Entitys.add(entity);
+        this.entity = new WeakReference<T>(entity);
     }
 
-    protected void unregister(T entity) {
-        Entitys.remove(entity);
-        if (Entitys.size() == 0) {
-            for (Iterator iter = ProcessorMap.entrySet().iterator(); iter.hasNext(); ) {
-                Map.Entry<String, Set<BusFlowableProcessor>> entry = (Map.Entry<String, Set<BusFlowableProcessor>>) iter.next();
-                Set<BusFlowableProcessor> bPros = entry.getValue();
-                for (BusFlowableProcessor p : bPros)
-                    p.dispose();
-            }
+    protected void unregister(Map<String, Set<BusFlowableProcessor>> map) {
+        for (Iterator iter = ProcessorMap.entrySet().iterator(); iter.hasNext(); ) {
+            Map.Entry<String, Set<BusFlowableProcessor>> entry = (Map.Entry<String, Set<BusFlowableProcessor>>) iter.next();
+            String tag = entry.getKey();
+            Set<BusFlowableProcessor> bPros = entry.getValue();
+
+            Set<BusFlowableProcessor> allBPros = map.get(tag);
+            allBPros.removeAll(bPros);
+            if (allBPros.size() == 0)
+                map.remove(tag);
+
+            for (BusFlowableProcessor p : bPros)
+                p.dispose();
         }
+        ProcessorMap.clear();
+        this.entity.clear();
+        this.entity = null;
     }
 
     protected void mount(Map<String, Set<BusFlowableProcessor>> map) {
