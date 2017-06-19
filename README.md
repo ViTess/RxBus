@@ -11,12 +11,13 @@
 
 ```groovy
 dependencies {
-  compile 'com.github.vitess:rxbus:2.0.2'
-  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.2'
+  compile 'com.github.vitess:rxbus:2.0.3'
+  annotationProcessor 'com.github.vitess:rxbus-compiler:2.0.3'
 }
 ```
 
 开发版本的快照可从[Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/)中找到。
+
 
 使用
 ---
@@ -85,11 +86,59 @@ public class MainActivity extends AppCompatActivity {
 }
 ```
 
+#### 粘性功能
+
+从`2.0.3`版本开始，增加了发送粘性事件(Sticky)的功能，但目前该功能尚处于试验阶段。
+
+* 粘性事件使用`RxBus.postSticky(String tag ,Object value)`发布，同时返回该粘性事件的标记码(int类型)
+* 使用`RxBus.removeSticky(int key)`来回收标记码对应的粘性事件
+* 使用`RxBus.removeAllSticky()`回收所有粘性事件
+
+由于粘性事件使用静态容器存储，所以请务必在应用关闭时回收所有粘性事件，或在不需要用到粘性事件后将其回收。
+
+For example:
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    int mStickyKey;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        RxBus.register(this);
+        //TODO something
+        ...
+        
+        findViewById(R.id.button).setOnClickListenernew(View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mStickyKey = RxBus.postSticky("sticky", 123);//post sticky event to receiver
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        //RxBus.removeAllSticky();
+        RxBus.removeSticky(mStickyKey);
+        RxBus.unregister(this);
+    }
+
+    @Subscribe("sticky")
+    @RxThread(ThreadType.IO)
+    public void receiver(int random) {
+        Log.i("RxBus", "receiver1:" + Thread.currentThread().getName());
+    }
+}
+```
+
 限制
 ---
 
-1. 目前支持发送null值（虽然post方法标记了@NonNull）
-2. 不支持发送实现了Map、Collection接口的参数类型（如ArrayList、HashMap等），如果必须发送这种集合容器参数，请自实现实体类，集合容器作为成员变量，然后发送实体类参数
+1. 不支持发送实现了Map、Collection接口的参数类型（如ArrayList、HashMap等），如果必须发送这种集合容器参数，请自实现实体类，集合容器作为成员变量，然后发送实体类参数
 
 TODO
 ---
@@ -100,7 +149,7 @@ TODO
 * 优化Processor性能
 * 优化模板代码
 * 优化Processor的缓存方式和生成模式
-* 增加sticky事件支持
+* ~~增加sticky事件支持~~
 * 根据使用方式分别生成不同的Observable，使用频率较少的用`post`方法发射，每次独立生成`Single`完成操作；使用频率较高且生命周期较长的使用`continuePost`方法发射，仅生成`Processor`完成操作
 * etc.
 
