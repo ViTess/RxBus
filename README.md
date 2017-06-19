@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 }
 ```
 
-#### 粘性功能
+### 粘性功能
 
 从`2.0.3`版本开始，增加了发送粘性事件(Sticky)的功能，但目前该功能尚处于试验阶段。
 
