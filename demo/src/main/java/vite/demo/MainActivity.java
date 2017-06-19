@@ -24,7 +24,8 @@ import vite.rxbus.RxThread;
 import vite.rxbus.Subscribe;
 import vite.rxbus.ThreadType;
 
-public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener {
+public class MainActivity extends FragmentActivity implements View.OnClickListener, TestFragment.OnFragmentInteractionListener, StickyFragment
+        .OnFragmentInteractionListener {
 
     public static final String TAG = "Test";
 
@@ -37,6 +38,8 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
     TestFragment f3 = TestFragment.newInstance("three", null);
 
     ArrayList<Fragment> arrayList = new ArrayList<>();
+
+    int stickyTagKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,20 +88,28 @@ public class MainActivity extends FragmentActivity implements View.OnClickListen
         switch (v.getId()) {
             case R.id.main_bt:
 //                RxBus.post(TAG, random.nextInt());
-                RxBus.post(TAG, new int[]{1, 3, 2});
+//                RxBus.post(TAG, new int[]{1, 3, 2});
+                stickyTagKey = RxBus.postSticky("FUCK", random.nextInt());
                 break;
             case R.id.main_bt_void:
-                /* RxJava2.0 not allow Null */
-                RxBus.post(TAG, null);
+//                RxBus.post(TAG, null);
+
+                FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+                transaction.replace(R.id.main_fl, StickyFragment.newInstance(null, null));
+                transaction.commit();
+
                 break;
             case R.id.main_bt_tag1:
-                RxBus.post("test1", "Main Button Tag1");
+//                RxBus.post("test1", "Main Button Tag1");
+
+                RxBus.removeSticky(stickyTagKey);
                 break;
             case R.id.main_bt_tag2:
                 RxBus.post("test2", "Main Button Tag2");
                 break;
             case R.id.main_bt_tag3:
-                RxBus.post("test3", new Entity("Hello", "Wrold"));
+//                RxBus.post("test3", new Entity("Hello", "Wrold"));
+                Log.v("RxBus", RxBus.toStrings());
                 break;
         }
     }

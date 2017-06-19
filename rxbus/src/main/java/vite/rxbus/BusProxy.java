@@ -1,8 +1,8 @@
 package vite.rxbus;
 
-import android.text.TextUtils;
 import android.util.Log;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,18 +20,24 @@ import io.reactivex.internal.operators.flowable.FlowableInternalHelper;
  * Created by trs on 17-1-4.
  */
 public class BusProxy<T> {
-    protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
-    protected final HashMap<String, Set<BusProcessor<T>>> SubjectMap = new HashMap<>();
+
+    protected interface IAction<T, V> {
+        void toDo(T t, V v);
+    }
+
+    //    protected final Set<T> Entitys = new WeakHashSet<>();//avoid memory leak
+    protected final HashMap<String, Set<BusFlowableProcessor<T>>> ProcessorMap = new HashMap<>();
+
+    private WeakReference<T> entity;
 
     protected <V> void createMethod(String tag, Scheduler scheduler, final Class<V> clazz, final IAction<T, V> proxyAction) {
-        BusProcessor p = BusProcessor.create();
+        BusFlowableProcessor p = BusProcessor.create().toSerialized();
         BusSubscriber<V> busSubscriber = new BusSubscriber<>(new Consumer<V>() {
             @Override
             public void accept(V v) throws Exception {
                 //TODO:thread-safe Entitys
-                for (T t : Entitys) {
-                    proxyAction.toDo(t, v);
-                }
+                if (entity != null && entity.get() != null)
+                    proxyAction.toDo(entity.get(), v);
             }
         }, new Consumer<Throwable>() {
             @Override
@@ -48,43 +54,52 @@ public class BusProxy<T> {
             }
         }).observeOn(scheduler).subscribeWith(busSubscriber);
 
-        Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
+        Set<BusFlowableProcessor<T>> bPros = ProcessorMap.get(tag);
         if (bPros == null) {
             bPros = new HashSet<>();
-            SubjectMap.put(tag, bPros);
+            ProcessorMap.put(tag, bPros);
         }
         bPros.add(p);
     }
 
     protected void post(String tag, Object value) {
-        Set<BusProcessor<T>> bPros = SubjectMap.get(tag);
-        for (BusProcessor p : bPros)
-            p.onNext(value);
+        Set<BusFlowableProcessor<T>> bPros = ProcessorMap.get(tag);
+        if (bPros != null)
+            for (BusFlowableProcessor p : bPros)
+                p.onNext(value);
     }
 
     protected void register(T entity) {
-        Entitys.add(entity);
+//        Entitys.add(entity);
+        this.entity = new WeakReference<T>(entity);
     }
 
-    protected void unregister(T entity) {
-        Entitys.remove(entity);
-        if (Entitys.size() == 0) {
-            for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
-                Map.Entry<String, Set<BusProcessor>> entry = (Map.Entry<String, Set<BusProcessor>>) iter.next();
-                Set<BusProcessor> bPros = entry.getValue();
-                for (BusProcessor p : bPros)
-                    p.dispose();
-            }
-        }
-    }
-
-    protected void mount(Map<String, Set<BusProcessor>> map) {
-        for (Iterator iter = SubjectMap.entrySet().iterator(); iter.hasNext(); ) {
-            Map.Entry<String, Set<BusProcessor>> entry = (Map.Entry<String, Set<BusProcessor>>) iter.next();
+    protected void unregister(Map<String, Set<BusFlowableProcessor>> map) {
+        for (Iterator iter = ProcessorMap.entrySet().iterator(); iter.hasNext(); ) {
+            Map.Entry<String, Set<BusFlowableProcessor>> entry = (Map.Entry<String, Set<BusFlowableProcessor>>) iter.next();
             String tag = entry.getKey();
-            Set<BusProcessor> bPros = entry.getValue();
+            Set<BusFlowableProcessor> bPros = entry.getValue();
 
-            Set<BusProcessor> allBPros = map.get(tag);
+            Set<BusFlowableProcessor> allBPros = map.get(tag);
+            allBPros.removeAll(bPros);
+            if (allBPros.size() == 0)
+                map.remove(tag);
+
+            for (BusFlowableProcessor p : bPros)
+                p.dispose();
+        }
+        ProcessorMap.clear();
+        this.entity.clear();
+        this.entity = null;
+    }
+
+    protected void mount(Map<String, Set<BusFlowableProcessor>> map) {
+        for (Iterator iter = ProcessorMap.entrySet().iterator(); iter.hasNext(); ) {
+            Map.Entry<String, Set<BusFlowableProcessor>> entry = (Map.Entry<String, Set<BusFlowableProcessor>>) iter.next();
+            String tag = entry.getKey();
+            Set<BusFlowableProcessor> bPros = entry.getValue();
+
+            Set<BusFlowableProcessor> allBPros = map.get(tag);
             if (allBPros == null) {
                 allBPros = new CopyOnWriteArraySet<>();
                 map.put(tag, allBPros);
