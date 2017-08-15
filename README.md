@@ -1,3 +1,7 @@
+Deprecated
+---
+该项目于17.0815停止维护，主要原因是个人不太推荐使用事件总线来实现功能，具体原因[点这里](http://blog.csdn.net/vite_s/article/details/77197620)
+
 # Android RxBus
 
 该项目基于[RxJava2](https://github.com/ReactiveX/RxJava) & [RxAndroid](https://github.com/ReactiveX/RxAndroid)，并且从[AndroidKnife/RxBus](https://github.com/AndroidKnife/RxBus)中学习而实现的。
